@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChaCha20 Stream Cipher — crypto-lab</title>
+    <meta name="description" content="Interactive ChaCha20 stream cipher demo. Visualize the quarter-round, keystream generation, and nonce reuse attacks." />
+  </head>
+  <body>
+    <div class="container">
+
+      <!-- Header -->
+      <header>
+        <h1><span>ChaCha20</span> Stream Cipher</h1>
+        <div class="header-links">
+          <a href="https://systemslibrarian.github.io/crypto-lab/">← crypto-lab</a>
+          <button id="theme-toggle" title="Toggle theme">🌙</button>
+        </div>
+      </header>
+
+      <span class="badge">crypto-lab interactive demo</span>
+
+      <!-- ═══ Section A — Encrypt / Decrypt Playground ═══ -->
+      <div class="section" id="section-encrypt">
+        <h2><span class="icon">🔐</span> Encrypt / Decrypt Playground</h2>
+
+        <div class="field-row">
+          <span class="field-label">Key</span>
+          <span class="field-value" id="key-display"></span>
+          <span class="byte-tag" id="key-len"></span>
+          <button class="btn btn-sm" id="btn-copy-key">Copy</button>
+          <button class="btn btn-sm" id="btn-regen-key">Regenerate</button>
+        </div>
+
+        <div class="field-row">
+          <span class="field-label">Nonce</span>
+          <span class="field-value" id="nonce-display"></span>
+          <span class="byte-tag" id="nonce-len"></span>
+          <button class="btn btn-sm" id="btn-copy-nonce">Copy</button>
+          <button class="btn btn-sm" id="btn-regen-nonce">Regenerate</button>
+        </div>
+
+        <label class="field-label" style="margin-top:12px; display:block;">Plaintext</label>
+        <textarea id="plaintext-input" rows="3" placeholder="Type a message to encrypt…">The quick brown fox jumps over the lazy dog</textarea>
+        <span class="byte-tag" id="pt-len">43 bytes</span>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-encrypt">Encrypt</button>
+          <button class="btn" id="btn-decrypt">Decrypt</button>
+        </div>
+
+        <label class="field-label">Ciphertext (hex)</label>
+        <div class="output-box" id="ciphertext-display"></div>
+        <div class="field-row">
+          <span class="byte-tag" id="ct-len"></span>
+          <button class="btn btn-sm" id="btn-copy-ct">Copy</button>
+        </div>
+
+        <label class="field-label">Decrypted</label>
+        <div class="output-box" id="decrypted-display"></div>
+      </div>
+
+      <!-- ═══ Section B — Keystream Visualizer ═══ -->
+      <div class="section" id="section-keystream">
+        <h2><span class="icon">🌊</span> Keystream Visualizer</h2>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-show-keystream">Show Keystream (64 bytes)</button>
+          <button class="btn" id="btn-new-nonce-ks">Regenerate Nonce → New Keystream</button>
+        </div>
+        <div id="keystream-grid"></div>
+        <p class="ks-label">Same key, different nonce → completely different keystream</p>
+      </div>
+
+      <!-- ═══ Section C — Quarter-Round Stepper ═══ -->
+      <div class="section" id="section-qr">
+        <h2><span class="icon">⚙️</span> Quarter-Round Stepper</h2>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-run-qr">Run Quarter Round</button>
+          <button class="btn" id="btn-next-round" disabled>Next Quarter-Round</button>
+        </div>
+        <p id="round-label"></p>
+        <div id="state-matrix"></div>
+        <div id="qr-step-table"></div>
+      </div>
+
+      <!-- ═══ Section D — Nonce Reuse Attack Demo ═══ -->
+      <div class="section" id="section-nonce-reuse">
+        <h2><span class="icon">⚠️</span> Nonce Reuse Attack Demo</h2>
+        <div class="nr-inputs">
+          <div>
+            <label>Message 1</label>
+            <textarea id="nonce-msg1" rows="2" placeholder="Attack at dawn">Attack at dawn</textarea>
+          </div>
+          <div>
+            <label>Message 2</label>
+            <textarea id="nonce-msg2" rows="2" placeholder="Retreat to base">Retreat to base</textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-nonce-reuse">Same Key + Same Nonce → Encrypt Both</button>
+
+        <label class="field-label" style="margin-top:12px;">Ciphertext 1</label>
+        <div class="output-box" id="nr-ct1"></div>
+
+        <label class="field-label">Ciphertext 2</label>
+        <div class="output-box" id="nr-ct2"></div>
+
+        <label class="field-label">ct1 ⊕ ct2 = pt1 ⊕ pt2 (keystream cancelled!)</label>
+        <div class="output-box" id="nr-xor"></div>
+        <p id="nr-explanation"></p>
+
+        <div class="warning-banner">
+          ⚠ Never reuse a nonce with the same key. This demo shows exactly why.
+        </div>
+      </div>
+
+      <!-- ═══ Info Panel ═══ -->
+      <div class="section" id="section-info">
+        <h2><span class="icon">📚</span> Learn More</h2>
+
+        <div class="info-tabs">
+          <button class="info-tab-btn active" data-tab="comparison">ChaCha20 vs AES</button>
+          <button class="info-tab-btn" data-tab="matrix">State Matrix</button>
+          <button class="info-tab-btn" data-tab="safety">Safe Usage Rules</button>
+        </div>
+
+        <!-- Tab 1 — ChaCha20 vs AES -->
+        <div class="info-tab-panel active" id="tab-comparison">
+          <h3>Why ChaCha20?</h3>
+          <ul>
+            <li><strong>Software performance without AES-NI:</strong> On devices lacking hardware AES instructions (mobile, IoT, older ARM), ChaCha20 runs 2–3× faster than software AES.</li>
+            <li><strong>Timing-attack resistance:</strong> AES uses S-box table lookups that leak timing information. ChaCha20's ARX design (Add-Rotate-XOR) uses only constant-time operations — no lookup tables.</li>
+            <li><strong>Google's choice:</strong> Google adopted ChaCha20-Poly1305 for Android TLS and QUIC because most mobile devices lacked AES-NI when the decision was made.</li>
+            <li><strong>RFC 8439:</strong> Standardizes ChaCha20 and Poly1305 for IETF protocols including TLS 1.3.</li>
+          </ul>
+          <h3>ARX Design</h3>
+          <p>ChaCha20 uses only three operations — <strong>Add</strong> (mod 2³²), <strong>Rotate</strong> (bit rotation), and <strong>XOR</strong>. These are constant-time on virtually all CPUs, making side-channel attacks fundamentally harder.</p>
+        </div>
+
+        <!-- Tab 2 — State Matrix -->
+        <div class="info-tab-panel" id="tab-matrix">
+          <h3>The 4×4 State Matrix</h3>
+          <p>ChaCha20 operates on a 4×4 matrix of 32-bit words (512 bits total):</p>
+          <table class="state-table">
+            <tr><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td></tr>
+            <tr><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td></tr>
+            <tr><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td></tr>
+            <tr><td style="color:var(--orange);">bbbbbbbb</td><td style="color:var(--red);">nnnnnnnn</td><td style="color:var(--red);">nnnnnnnn</td><td style="color:var(--red);">nnnnnnnn</td></tr>
+          </table>
+          <ul>
+            <li><strong style="color:var(--accent);">c</strong> — Constants: the ASCII of "expand 32-byte k" (<code>0x61707865 0x3320646e 0x79622d32 0x6b206574</code>)</li>
+            <li><strong style="color:var(--green);">k</strong> — Key: 256 bits (8 words) of secret key material</li>
+            <li><strong style="color:var(--orange);">b</strong> — Block counter: 32-bit counter, incremented per 64-byte block</li>
+            <li><strong style="color:var(--red);">n</strong> — Nonce: 96 bits (3 words), must be unique per message</li>
+          </ul>
+        </div>
+
+        <!-- Tab 3 — Safe Usage Rules -->
+        <div class="info-tab-panel" id="tab-safety">
+          <h3>Rules for Safe ChaCha20 Usage</h3>
+          <ol>
+            <li><strong>Never reuse a nonce+key pair.</strong> This demo's Section D shows exactly why — the keystream cancels, leaking plaintext XORs.</li>
+            <li><strong>Prefer XChaCha20 for long-lived keys.</strong> Its 192-bit nonce is large enough for random generation without realistic collision risk.</li>
+            <li><strong>Always pair with Poly1305 for authentication.</strong> ChaCha20 alone provides confidentiality, not integrity. Use ChaCha20-Poly1305 (AEAD) in production.</li>
+            <li><strong>Counter overflow at 2³² blocks = 256 GB per key/nonce.</strong> For larger data streams, rotate key/nonce pairs.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Why This Matters -->
+      <details>
+        <summary>Why this matters</summary>
+        <div>
+          <p>AES requires dedicated hardware instructions (AES-NI) to run safely and quickly.
+          On devices without AES-NI — most ARM chips before 2011, many IoT devices, some
+          embedded systems — AES implementations leak timing information that can expose keys.
+          ChaCha20 is immune to this entire class of attack by design. That's why TLS 1.3
+          supports it as a first-class cipher suite.</p>
+        </div>
+      </details>
+
+      <!-- Cross-links -->
+      <nav class="cross-links">
+        <a href="https://systemslibrarian.github.io/crypto-lab-aes-modes/">AES Modes</a>
+        <a href="https://systemslibrarian.github.io/crypto-lab-shadow-vault/">Shadow Vault</a>
+        <a href="https://systemslibrarian.github.io/crypto-lab-ratchet-wire/">Ratchet Wire</a>
+        <a href="https://systemslibrarian.github.io/crypto-lab-noise-pipe/">Noise Pipe</a>
+      </nav>
+
+      <footer>
+        <p>Part of <a href="https://systemslibrarian.github.io/crypto-lab/">crypto-lab</a></p>
+        <p class="verse">"Whatever you do, do it all for the glory of God." — 1 Corinthians 10:31</p>
+      </footer>
+
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
