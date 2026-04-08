@@ -15,7 +15,7 @@
         <h1><span>ChaCha20</span> Stream Cipher</h1>
         <div class="header-links">
           <a href="https://systemslibrarian.github.io/crypto-lab/">← crypto-lab</a>
-          <button id="theme-toggle" title="Toggle theme">🌙</button>
+          <button id="theme-toggle" title="Toggle theme" aria-label="Toggle dark and light theme">🌙</button>
         </div>
       </header>
 
@@ -23,7 +23,7 @@
 
       <!-- ═══ Section A — Encrypt / Decrypt Playground ═══ -->
       <div class="section" id="section-encrypt">
-        <h2><span class="icon">🔐</span> Encrypt / Decrypt Playground</h2>
+        <h2><span class="icon" aria-hidden="true">🔐</span> Encrypt / Decrypt Playground</h2>
 
         <div class="field-row">
           <span class="field-label">Key</span>
@@ -41,7 +41,7 @@
           <button class="btn btn-sm" id="btn-regen-nonce">Regenerate</button>
         </div>
 
-        <label class="field-label" style="margin-top:12px; display:block;">Plaintext</label>
+        <label class="field-label" for="plaintext-input" style="margin-top:12px; display:block;">Plaintext</label>
         <textarea id="plaintext-input" rows="3" placeholder="Type a message to encrypt…">The quick brown fox jumps over the lazy dog</textarea>
         <span class="byte-tag" id="pt-len">43 bytes</span>
 
@@ -50,31 +50,31 @@
           <button class="btn" id="btn-decrypt">Decrypt</button>
         </div>
 
-        <label class="field-label">Ciphertext (hex)</label>
-        <div class="output-box" id="ciphertext-display"></div>
+        <label class="field-label" id="ct-label">Ciphertext (hex)</label>
+        <div class="output-box" id="ciphertext-display" role="status" aria-live="polite" aria-labelledby="ct-label"></div>
         <div class="field-row">
           <span class="byte-tag" id="ct-len"></span>
           <button class="btn btn-sm" id="btn-copy-ct">Copy</button>
         </div>
 
-        <label class="field-label">Decrypted</label>
-        <div class="output-box" id="decrypted-display"></div>
+        <label class="field-label" id="decrypted-label">Decrypted</label>
+        <div class="output-box" id="decrypted-display" role="status" aria-live="polite" aria-labelledby="decrypted-label"></div>
       </div>
 
       <!-- ═══ Section B — Keystream Visualizer ═══ -->
       <div class="section" id="section-keystream">
-        <h2><span class="icon">🌊</span> Keystream Visualizer</h2>
+        <h2><span class="icon" aria-hidden="true">🌊</span> Keystream Visualizer</h2>
         <div class="btn-row">
           <button class="btn btn-primary" id="btn-show-keystream">Show Keystream (64 bytes)</button>
           <button class="btn" id="btn-new-nonce-ks">Regenerate Nonce → New Keystream</button>
         </div>
-        <div id="keystream-grid"></div>
+        <div id="keystream-grid" role="img" aria-label="Visual grid of 64 keystream bytes colored by value"></div>
         <p class="ks-label">Same key, different nonce → completely different keystream</p>
       </div>
 
       <!-- ═══ Section C — Quarter-Round Stepper ═══ -->
       <div class="section" id="section-qr">
-        <h2><span class="icon">⚙️</span> Quarter-Round Stepper</h2>
+        <h2><span class="icon" aria-hidden="true">⚙️</span> Quarter-Round Stepper</h2>
         <div class="btn-row">
           <button class="btn btn-primary" id="btn-run-qr">Run Quarter Round</button>
           <button class="btn" id="btn-next-round" disabled>Next Quarter-Round</button>
@@ -86,14 +86,14 @@
 
       <!-- ═══ Section D — Nonce Reuse Attack Demo ═══ -->
       <div class="section" id="section-nonce-reuse">
-        <h2><span class="icon">⚠️</span> Nonce Reuse Attack Demo</h2>
+        <h2><span class="icon" aria-hidden="true">⚠️</span> Nonce Reuse Attack Demo</h2>
         <div class="nr-inputs">
           <div>
-            <label>Message 1</label>
+            <label for="nonce-msg1">Message 1</label>
             <textarea id="nonce-msg1" rows="2" placeholder="Attack at dawn">Attack at dawn</textarea>
           </div>
           <div>
-            <label>Message 2</label>
+            <label for="nonce-msg2">Message 2</label>
             <textarea id="nonce-msg2" rows="2" placeholder="Retreat to base">Retreat to base</textarea>
           </div>
         </div>
@@ -109,23 +109,23 @@
         <div class="output-box" id="nr-xor"></div>
         <p id="nr-explanation"></p>
 
-        <div class="warning-banner">
+        <div class="warning-banner" role="alert">
           ⚠ Never reuse a nonce with the same key. This demo shows exactly why.
         </div>
       </div>
 
       <!-- ═══ Info Panel ═══ -->
       <div class="section" id="section-info">
-        <h2><span class="icon">📚</span> Learn More</h2>
+        <h2><span class="icon" aria-hidden="true">📚</span> Learn More</h2>
 
-        <div class="info-tabs">
-          <button class="info-tab-btn active" data-tab="comparison">ChaCha20 vs AES</button>
-          <button class="info-tab-btn" data-tab="matrix">State Matrix</button>
-          <button class="info-tab-btn" data-tab="safety">Safe Usage Rules</button>
+        <div class="info-tabs" role="tablist" aria-label="Information tabs">
+          <button class="info-tab-btn active" data-tab="comparison" role="tab" aria-selected="true" aria-controls="tab-comparison" id="tabbtn-comparison">ChaCha20 vs AES</button>
+          <button class="info-tab-btn" data-tab="matrix" role="tab" aria-selected="false" aria-controls="tab-matrix" id="tabbtn-matrix">State Matrix</button>
+          <button class="info-tab-btn" data-tab="safety" role="tab" aria-selected="false" aria-controls="tab-safety" id="tabbtn-safety">Safe Usage Rules</button>
         </div>
 
         <!-- Tab 1 — ChaCha20 vs AES -->
-        <div class="info-tab-panel active" id="tab-comparison">
+        <div class="info-tab-panel active" id="tab-comparison" role="tabpanel" aria-labelledby="tabbtn-comparison">
           <h3>Why ChaCha20?</h3>
           <ul>
             <li><strong>Software performance without AES-NI:</strong> On devices lacking hardware AES instructions (mobile, IoT, older ARM), ChaCha20 runs 2–3× faster than software AES.</li>
@@ -138,7 +138,7 @@
         </div>
 
         <!-- Tab 2 — State Matrix -->
-        <div class="info-tab-panel" id="tab-matrix">
+        <div class="info-tab-panel" id="tab-matrix" role="tabpanel" aria-labelledby="tabbtn-matrix">
           <h3>The 4×4 State Matrix</h3>
           <p>ChaCha20 operates on a 4×4 matrix of 32-bit words (512 bits total):</p>
           <table class="state-table">
@@ -156,7 +156,7 @@
         </div>
 
         <!-- Tab 3 — Safe Usage Rules -->
-        <div class="info-tab-panel" id="tab-safety">
+        <div class="info-tab-panel" id="tab-safety" role="tabpanel" aria-labelledby="tabbtn-safety">
           <h3>Rules for Safe ChaCha20 Usage</h3>
           <ol>
             <li><strong>Never reuse a nonce+key pair.</strong> This demo's Section D shows exactly why — the keystream cancels, leaking plaintext XORs.</li>
@@ -180,7 +180,7 @@
       </details>
 
       <!-- Cross-links -->
-      <nav class="cross-links">
+      <nav class="cross-links" aria-label="Related crypto-lab demos">
         <a href="https://systemslibrarian.github.io/crypto-lab-aes-modes/">AES Modes</a>
         <a href="https://systemslibrarian.github.io/crypto-lab-shadow-vault/">Shadow Vault</a>
         <a href="https://systemslibrarian.github.io/crypto-lab-ratchet-wire/">Ratchet Wire</a>
