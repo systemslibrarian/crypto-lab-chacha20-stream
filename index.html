@@ -2,6 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function () {
+        const saved = localStorage.getItem('theme');
+        document.documentElement.setAttribute('data-theme', saved ?? 'dark');
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ChaCha20 Stream Cipher — crypto-lab</title>
@@ -15,8 +21,8 @@
         <h1><span>ChaCha20</span> Stream Cipher</h1>
         <div class="header-links">
           <a href="https://systemslibrarian.github.io/crypto-lab/">← crypto-lab</a>
-          <button id="theme-toggle" title="Toggle theme" aria-label="Toggle dark and light theme">🌙</button>
         </div>
+        <button id="theme-toggle" aria-label="Switch to light mode" style="position: absolute; top: 0; right: 0;">🌙</button>
       </header>
 
       <span class="badge">crypto-lab interactive demo</span>

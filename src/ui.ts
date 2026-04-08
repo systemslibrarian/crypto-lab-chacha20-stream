@@ -244,25 +244,23 @@ function initThemeToggle() {
   const toggle = $('#theme-toggle') as HTMLButtonElement;
   const root = document.documentElement;
 
-  // Check system preference or stored preference
-  const stored = localStorage.getItem('theme');
-  if (stored) {
-    root.setAttribute('data-theme', stored);
+  function update() {
+    const theme = root.getAttribute('data-theme') ?? 'dark';
+    const isDark = theme === 'dark';
+    toggle.textContent = isDark ? '🌙' : '☀️';
+    toggle.setAttribute('aria-label',
+      isDark ? 'Switch to light mode' : 'Switch to dark mode');
   }
 
   toggle.addEventListener('click', () => {
-    const current = root.getAttribute('data-theme');
+    const current = root.getAttribute('data-theme') ?? 'dark';
     const next = current === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
-    toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    update();
   });
 
-  // Set initial icon
-  const isDark =
-    root.getAttribute('data-theme') === 'dark' ||
-    (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  toggle.textContent = isDark ? '☀️' : '🌙';
+  update();
 }
 
 // ─── Info Tabs ───────────────────────────────────────────────
