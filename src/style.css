@@ -476,12 +476,52 @@ textarea:focus {
 }
 
 @media (max-width: 600px) {
+  .container { padding: 0 12px 40px; }
+
   .section { padding: 16px; }
+
   header h1 { font-size: 1rem; }
-  .field-row { gap: 4px; }
+
+  /* Stack field rows so label sits above the hex value, not beside it */
+  .field-row {
+    gap: 4px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .field-row .field-label {
+    min-width: unset;
+  }
+
+  /* Hex values scroll sideways instead of breaking across 4+ lines */
+  .field-row .field-value {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    word-break: normal;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Byte-tag + buttons sit on their own flex row */
+  .field-row .byte-tag,
+  .field-row .btn {
+    flex: none;
+  }
+
+  /* Cap output boxes so ciphertext doesn't scroll the whole page */
+  .output-box {
+    max-height: 90px;
+    overflow-y: auto;
+  }
+
   .matrix-cell { font-size: 0.6rem; padding: 5px 2px; }
   .matrix-val { font-size: 0.58rem; }
   #qr-step-table table { font-size: 0.68rem; }
+}
+
+@media (max-width: 400px) {
+  /* Tightest screens: keystream drops to 4 cols so cells stay legible */
+  #keystream-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 .state-table th { background: var(--bg-input); font-weight: 600; }
