@@ -5,10 +5,10 @@ import {
   generateKey,
   generateNonce,
   nonceReuseDemo,
-  getKeystream,
+  cribDrag,
   toHex,
 } from './cipher.ts';
-import { chachaBlock } from './quarterround.ts';
+import { chachaBlock, keystreamBlock } from './quarterround.ts';
 import type { ChachaBlockResult } from './quarterround.ts';
 
 // ─── State ───────────────────────────────────────────────────
@@ -18,7 +18,31 @@ let lastCiphertext: Uint8Array | null = null;
 
 // Quarter-round stepper state
 let blockResult: ChachaBlockResult | null = null;
-let currentRoundIndex = 0;
+
+// The key and nonce are shared across sections (Section A shows them, B derives
+// the keystream, C steps the block). Route every mutation through setKey/setNonce
+// so all sections re-render in sync — otherwise one section's regenerate leaves
+// another showing stale ciphertext / keystream.
+type KeyNonceReason = 'key' | 'nonce';
+const keyNonceListeners: Array<(reason: KeyNonceReason) => void> = [];
+
+function onKeyNonce(fn: (reason: KeyNonceReason) => void) {
+  keyNonceListeners.push(fn);
+}
+
+function emitKeyNonce(reason: KeyNonceReason) {
+  for (const fn of keyNonceListeners) fn(reason);
+}
+
+function setKey(k: Uint8Array) {
+  currentKey = k;
+  emitKeyNonce('key');
+}
+
+function setNonce(n: Uint8Array) {
+  currentNonce = n;
+  emitKeyNonce('nonce');
+}
 
 // ─── Helpers ─────────────────────────────────────────────────
 function $(sel: string): HTMLElement {
@@ -26,11 +50,20 @@ function $(sel: string): HTMLElement {
 }
 
 function copyToClipboard(text: string, btn: HTMLElement) {
-  navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = 'Copied!';
+  const orig = btn.textContent;
+  const restore = (msg: string) => {
+    btn.textContent = msg;
     setTimeout(() => (btn.textContent = orig), 1200);
-  });
+  };
+  // Clipboard API is unavailable outside secure contexts; fail gracefully.
+  if (!navigator.clipboard?.writeText) {
+    restore('Unavailable');
+    return;
+  }
+  navigator.clipboard
+    .writeText(text)
+    .then(() => restore('Copied!'))
+    .catch(() => restore('Failed'));
 }
 
 function byteColor(byte: number): string {
@@ -61,22 +94,37 @@ function initEncryptDecrypt() {
     nonceLen.textContent = `${currentNonce.length} bytes`;
   }
 
+  // Re-encrypt live whenever plaintext, key, or nonce changes. The decrypted
+  // box is cleared because any prior recovery is now stale.
+  function liveEncrypt() {
+    const pt = ptInput.value;
+    ptLen.textContent = `${new TextEncoder().encode(pt).length} bytes`;
+    if (!pt) {
+      lastCiphertext = null;
+      ctDisplay.textContent = '';
+      ctLen.textContent = '';
+      decryptedDisplay.textContent = '';
+      return;
+    }
+    lastCiphertext = encrypt(pt, currentKey, currentNonce);
+    ctDisplay.textContent = toHex(lastCiphertext);
+    ctLen.textContent = `${lastCiphertext.length} bytes`;
+    decryptedDisplay.textContent = '';
+  }
+
   refreshKeyNonce();
+  liveEncrypt();
 
-  ptInput.addEventListener('input', () => {
-    const len = new TextEncoder().encode(ptInput.value).length;
-    ptLen.textContent = `${len} bytes`;
-  });
-
-  $('#btn-regen-key').addEventListener('click', () => {
-    currentKey = generateKey();
+  // Keep this section in sync no matter which section changed the key/nonce.
+  onKeyNonce(() => {
     refreshKeyNonce();
+    liveEncrypt();
   });
 
-  $('#btn-regen-nonce').addEventListener('click', () => {
-    currentNonce = generateNonce();
-    refreshKeyNonce();
-  });
+  ptInput.addEventListener('input', liveEncrypt);
+
+  $('#btn-regen-key').addEventListener('click', () => setKey(generateKey()));
+  $('#btn-regen-nonce').addEventListener('click', () => setNonce(generateNonce()));
 
   $('#btn-copy-key').addEventListener('click', () => {
     copyToClipboard(toHex(currentKey), $('#btn-copy-key'));
@@ -86,20 +134,14 @@ function initEncryptDecrypt() {
     copyToClipboard(toHex(currentNonce), $('#btn-copy-nonce'));
   });
 
-  $('#btn-encrypt').addEventListener('click', () => {
-    const pt = ptInput.value;
-    if (!pt) return;
-    lastCiphertext = encrypt(pt, currentKey, currentNonce);
-    const hex = toHex(lastCiphertext);
-    ctDisplay.textContent = hex;
-    ctLen.textContent = `${lastCiphertext.length} bytes`;
-    decryptedDisplay.textContent = '';
-  });
+  $('#btn-encrypt').addEventListener('click', liveEncrypt);
 
   $('#btn-decrypt').addEventListener('click', () => {
     if (!lastCiphertext) return;
     const pt = decrypt(lastCiphertext, currentKey, currentNonce);
     decryptedDisplay.textContent = pt;
+    decryptedDisplay.classList.add('recovered');
+    setTimeout(() => decryptedDisplay.classList.remove('recovered'), 600);
   });
 
   $('#btn-copy-ct').addEventListener('click', () => {
@@ -112,28 +154,68 @@ function initEncryptDecrypt() {
 // ─── Section B: Keystream Visualizer ─────────────────────────
 function initKeystreamViz() {
   const grid = $('#keystream-grid') as HTMLElement;
+  const avalanche = $('#avalanche') as HTMLElement;
+  // Baseline keystream to measure the avalanche against. Tracks the same key,
+  // so a nonce change shows a true "one nonce → this much diffusion" stat.
+  let baseline = keystreamBlock(currentKey, currentNonce, 0);
 
-  function renderKeystream() {
-    const ks = getKeystream(currentKey, currentNonce, 64);
+  /** Count differing bits between two equal-length byte arrays. */
+  function bitsDiffer(a: Uint8Array, b: Uint8Array): number {
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) {
+      let x = a[i]! ^ b[i]!;
+      while (x) {
+        diff += x & 1;
+        x >>= 1;
+      }
+    }
+    return diff;
+  }
+
+  function renderGrid(ks: Uint8Array) {
+    // Use the hand-rolled, RFC-verified engine — the same block you step
+    // through in Section C produces exactly these 64 bytes.
     grid.innerHTML = '';
     for (let i = 0; i < ks.length; i++) {
       const cell = document.createElement('div');
       cell.className = 'ks-cell';
       cell.textContent = ks[i]!.toString(16).padStart(2, '0');
+      cell.title = `byte ${i}: ${ks[i]} (0x${ks[i]!.toString(16).padStart(2, '0')})`;
       cell.style.backgroundColor = byteColor(ks[i]!);
       cell.style.color = ks[i]! > 140 ? '#fff' : '#1e1e2e';
       grid.appendChild(cell);
     }
   }
 
-  $('#btn-show-keystream').addEventListener('click', renderKeystream);
+  function showAvalanche(before: Uint8Array, after: Uint8Array) {
+    const bits = bitsDiffer(before, after);
+    const pct = ((bits / 512) * 100).toFixed(1);
+    avalanche.hidden = false;
+    avalanche.innerHTML =
+      `<strong>Avalanche:</strong> ${bits} of 512 keystream bits flipped (${pct}%) ` +
+      `from a single new nonce — an ideal cipher changes ~50%.`;
+  }
 
-  $('#btn-new-nonce-ks').addEventListener('click', () => {
-    currentNonce = generateNonce();
-    $('#nonce-display').textContent = toHex(currentNonce);
-    $('#nonce-len').textContent = `${currentNonce.length} bytes`;
-    renderKeystream();
+  // Re-render whenever the key or nonce changes anywhere. A nonce change shows
+  // the avalanche stat; a key change just refreshes the grid (and hides a now
+  // meaningless stat).
+  onKeyNonce((reason) => {
+    const ks = keystreamBlock(currentKey, currentNonce, 0);
+    renderGrid(ks);
+    if (reason === 'nonce') showAvalanche(baseline, ks);
+    else avalanche.hidden = true;
+    baseline = ks;
   });
+
+  $('#btn-show-keystream').addEventListener('click', () => {
+    renderGrid(keystreamBlock(currentKey, currentNonce, 0));
+    avalanche.hidden = true;
+  });
+
+  $('#btn-new-nonce-ks').addEventListener('click', () => setNonce(generateNonce()));
+
+  // Render once on load so the section is never empty.
+  renderGrid(baseline);
 }
 
 // ─── Section C: Quarter-Round Stepper ────────────────────────
@@ -141,19 +223,37 @@ function initQuarterRoundStepper() {
   const stateGrid = $('#state-matrix') as HTMLElement;
   const stepTable = $('#qr-step-table') as HTMLElement;
   const roundLabel = $('#round-label') as HTMLElement;
+  const progress = $('.qr-progress') as HTMLElement;
+  const progressBar = $('#qr-progress-bar') as HTMLElement;
+  const prevBtn = $('#btn-prev-round') as HTMLButtonElement;
+  const playBtn = $('#btn-play-qr') as HTMLButtonElement;
+  const nextBtn = $('#btn-next-round') as HTMLButtonElement;
 
-  function renderMatrix(state: number[]) {
+  const LABELS = [
+    'const', 'const', 'const', 'const',
+    'key', 'key', 'key', 'key',
+    'key', 'key', 'key', 'key',
+    'ctr', 'nonce', 'nonce', 'nonce',
+  ];
+  const TOTAL = 80;
+
+  // step 0 = initial state; 1..80 = after that quarter-round; 81 = final (after add).
+  let step = 0;
+  let playTimer: ReturnType<typeof setInterval> | null = null;
+
+  function hex32(v: number): string {
+    return '0x' + (v >>> 0).toString(16).padStart(8, '0');
+  }
+
+  function renderMatrix(state: number[], active: readonly number[] = []) {
+    const activeSet = new Set(active);
     stateGrid.innerHTML = '';
-    const labels = [
-      'const', 'const', 'const', 'const',
-      'key', 'key', 'key', 'key',
-      'key', 'key', 'key', 'key',
-      'ctr', 'nonce', 'nonce', 'nonce',
-    ];
     for (let i = 0; i < 16; i++) {
       const cell = document.createElement('div');
-      cell.className = `matrix-cell matrix-${labels[i]}`;
-      cell.innerHTML = `<span class="matrix-val">0x${state[i]!.toString(16).padStart(8, '0')}</span><span class="matrix-lbl">${labels[i]}</span>`;
+      const role = active.indexOf(i);
+      cell.className = `matrix-cell matrix-${LABELS[i]}${activeSet.has(i) ? ' matrix-active' : ''}`;
+      const tag = role >= 0 ? `<span class="matrix-role">${'abcd'[role]}</span>` : '';
+      cell.innerHTML = `${tag}<span class="matrix-val">${hex32(state[i]!)}</span><span class="matrix-lbl">${LABELS[i]}</span>`;
       stateGrid.appendChild(cell);
     }
   }
@@ -170,37 +270,111 @@ function initQuarterRoundStepper() {
       html += `<tr>
         <td>${s.step}</td>
         <td class="op-cell">${ops[s.step - 1]}</td>
-        <td>0x${s.a.toString(16).padStart(8, '0')}</td>
-        <td>0x${s.b.toString(16).padStart(8, '0')}</td>
-        <td>0x${s.c.toString(16).padStart(8, '0')}</td>
-        <td>0x${s.d.toString(16).padStart(8, '0')}</td>
+        <td>${hex32(s.a)}</td>
+        <td>${hex32(s.b)}</td>
+        <td>${hex32(s.c)}</td>
+        <td>${hex32(s.d)}</td>
       </tr>`;
     }
     html += '</tbody></table>';
     stepTable.innerHTML = html;
   }
 
+  function setProgress(value: number) {
+    progressBar.style.width = `${(value / TOTAL) * 100}%`;
+    progress.setAttribute('aria-valuenow', String(value));
+  }
+
+  function render() {
+    if (!blockResult) return;
+
+    if (step === 0) {
+      renderMatrix(blockResult.initialState);
+      stepTable.innerHTML =
+        '<p class="hint-msg">Initial state: constants + key + counter + nonce. Press <strong>Next ▶</strong> to apply the first quarter-round.</p>';
+      roundLabel.innerHTML = 'Initial state — <strong>0 of 80</strong> quarter-rounds applied';
+      setProgress(0);
+    } else if (step <= TOTAL) {
+      const idx = step - 1;
+      const active = blockResult.active[idx]!;
+      renderMatrix(blockResult.snapshots[idx]!, active);
+      renderSteps(blockResult.rounds[idx]!);
+      const local = idx % 8;
+      const isColumn = local < 4;
+      const dr = Math.floor(idx / 8) + 1;
+      const positions = `(${active.join(', ')})`;
+      roundLabel.innerHTML =
+        `Double-round <strong>${dr}/10</strong> · <span class="${isColumn ? 'rt-col' : 'rt-diag'}">${isColumn ? 'Column' : 'Diagonal'} round</span> · ` +
+        `quarter-round <strong>${step}/80</strong> mixing words ${positions}`;
+      setProgress(step);
+    } else {
+      renderMatrix(blockResult.finalState);
+      stepTable.innerHTML =
+        '<p class="done-msg">✓ All 80 quarter-rounds complete. Final state = scrambled working state + initial state (mod 2³²). Serializing these 16 words little-endian yields the 64-byte keystream.</p>';
+      roundLabel.innerHTML = '<strong>Complete</strong> — final state ready to serialize into keystream';
+      setProgress(TOTAL);
+    }
+
+    prevBtn.disabled = step <= 0;
+    nextBtn.disabled = step > TOTAL;
+  }
+
+  function stopPlay() {
+    if (playTimer !== null) {
+      clearInterval(playTimer);
+      playTimer = null;
+    }
+    playBtn.textContent = '▶ Play';
+    playBtn.setAttribute('aria-label', 'Auto-play quarter-rounds');
+  }
+
+  function goTo(target: number) {
+    if (!blockResult) return;
+    step = Math.max(0, Math.min(TOTAL + 1, target));
+    render();
+  }
+
   $('#btn-run-qr').addEventListener('click', () => {
+    stopPlay();
     blockResult = chachaBlock(currentKey, currentNonce, 0);
-    currentRoundIndex = 0;
-    renderMatrix(blockResult.initialState);
-    renderSteps(blockResult.rounds[0]!);
-    roundLabel.textContent = 'Round 1 of 80 quarter-rounds (20 rounds × 4 QRs)';
-    $('#btn-next-round').removeAttribute('disabled');
+    step = 0;
+    render();
+    playBtn.disabled = false;
+    nextBtn.disabled = false;
   });
 
-  $('#btn-next-round').addEventListener('click', () => {
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(step - 1);
+  });
+
+  nextBtn.addEventListener('click', () => goTo(step + 1));
+
+  playBtn.addEventListener('click', () => {
     if (!blockResult) return;
-    currentRoundIndex++;
-    if (currentRoundIndex >= blockResult.rounds.length) {
-      roundLabel.textContent = 'All 80 quarter-rounds complete — showing final state';
-      renderMatrix(blockResult.finalState);
-      stepTable.innerHTML = '<p class="done-msg">✓ Final state = working state + initial state (mod 2³²)</p>';
-      $('#btn-next-round').setAttribute('disabled', '');
+    if (playTimer !== null) {
+      stopPlay();
       return;
     }
-    renderSteps(blockResult.rounds[currentRoundIndex]!);
-    roundLabel.textContent = `Quarter-round ${currentRoundIndex + 1} of 80`;
+    if (step > TOTAL) goTo(0); // replay from the start
+    playBtn.textContent = '⏸ Pause';
+    playBtn.setAttribute('aria-label', 'Pause auto-play');
+    playTimer = setInterval(() => {
+      if (step > TOTAL) {
+        stopPlay();
+        return;
+      }
+      goTo(step + 1);
+    }, 350);
+  });
+
+  // If the key/nonce changes after a block was initialized, recompute so the
+  // matrix never disagrees with the key/nonce shown above.
+  onKeyNonce(() => {
+    if (!blockResult) return;
+    stopPlay();
+    blockResult = chachaBlock(currentKey, currentNonce, 0);
+    render();
   });
 }
 
@@ -212,6 +386,36 @@ function initNonceReuse() {
   const ct2Display = $('#nr-ct2') as HTMLElement;
   const xorDisplay = $('#nr-xor') as HTMLElement;
   const explDisplay = $('#nr-explanation') as HTMLElement;
+  const cribBlock = $('#crib-drag') as HTMLElement;
+  const cribGuess = $('#crib-guess') as HTMLInputElement;
+  const cribOutput = $('#crib-output') as HTMLElement;
+
+  // The leak (pt1 ⊕ pt2) from the most recent attack, used for crib-dragging.
+  let lastXor: Uint8Array | null = null;
+
+  /** Render recovered bytes: printable ASCII as-is, others as a dim dot. */
+  function renderRecovered(bytes: Uint8Array): string {
+    let html = '';
+    for (const b of bytes) {
+      if (b >= 0x20 && b < 0x7f) {
+        const ch = String.fromCharCode(b)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        html += `<span class="crib-char">${ch === ' ' ? '&nbsp;' : ch}</span>`;
+      } else {
+        html += '<span class="crib-gap">·</span>';
+      }
+    }
+    return html;
+  }
+
+  function updateCrib() {
+    if (!lastXor) return;
+    cribOutput.innerHTML = renderRecovered(cribDrag(lastXor, cribGuess.value));
+  }
+
+  cribGuess.addEventListener('input', updateCrib);
 
   $('#btn-nonce-reuse').addEventListener('click', () => {
     const text1 = msg1.value || 'Attack at dawn';
@@ -236,6 +440,14 @@ function initNonceReuse() {
     }
     xorDisplay.innerHTML = xorHtml;
     explDisplay.textContent = result.explanation;
+
+    // Set up the crib-drag: pre-fill with the real Message 1 so recovery is
+    // perfect, then let the user degrade it to see how the attack depends on
+    // the guess — not on any secret.
+    lastXor = result.xorResult;
+    cribGuess.value = text1;
+    cribBlock.hidden = false;
+    updateCrib();
   });
 }
 
@@ -256,7 +468,11 @@ function initThemeToggle() {
     const current = root.getAttribute('data-theme') ?? 'dark';
     const next = current === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      // localStorage can be unavailable (private browsing); theme still applies.
+    }
     update();
   });
 

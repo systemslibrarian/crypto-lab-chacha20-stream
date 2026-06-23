@@ -4,7 +4,7 @@
 
 ## What It Is
 
-ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardized in RFC 8439. It encrypts data by XORing plaintext with a pseudorandom keystream generated from a 256-bit key, a 96-bit nonce, and a 32-bit block counter. The cipher uses an ARX construction (Add-Rotate-XOR) that operates entirely with constant-time instructions, providing confidentiality without relying on hardware acceleration. This demo implements the full ChaCha20 block function from scratch for visualization and uses `@noble/ciphers` for production encrypt/decrypt operations.
+ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardized in RFC 8439. It encrypts data by XORing plaintext with a pseudorandom keystream generated from a 256-bit key, a 96-bit nonce, and a 32-bit block counter. The cipher uses an ARX construction (Add-Rotate-XOR) that operates entirely with constant-time instructions, providing confidentiality without relying on hardware acceleration. This demo implements the full ChaCha20 block function from scratch for visualization and uses `@noble/ciphers` for production encrypt/decrypt operations. The hand-rolled engine is pinned to the official **RFC 8439 test vectors** and cross-checked byte-for-byte against `@noble/ciphers`, so the visualization is provably correct (see [Development](#development)).
 
 ## When to Use It
 
@@ -18,7 +18,12 @@ ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardize
 
 **[Launch Demo →](https://systemslibrarian.github.io/crypto-lab-chacha20-stream/)**
 
-The demo includes four interactive sections: an encrypt/decrypt playground where you can generate keys and nonces, type plaintext, and see ciphertext in real time; a keystream visualizer showing 64 bytes as a color-coded grid that changes completely when you regenerate the nonce; a quarter-round stepper that walks through all 80 quarter-round operations of the ChaCha20 block function showing the 4×4 state matrix at each step; and a nonce reuse attack demo that encrypts two messages with the same key+nonce and reveals how XORing the ciphertexts recovers the XOR of the plaintexts.
+The demo includes four interactive sections:
+
+- **Encrypt / decrypt playground** — generate keys and nonces, type plaintext, and watch ciphertext update live as you type; the Decrypt button proves the round-trip recovery.
+- **Keystream visualizer** — 64 bytes shown as a color-coded grid that changes completely when you regenerate the nonce, with an **avalanche readout** quantifying how many of the 512 keystream bits flipped (~50% for an ideal cipher).
+- **Quarter-round stepper** — step or auto-play through all 80 quarter-rounds, watching the 4×4 state matrix mutate cell-by-cell. The four words being mixed are highlighted and labeled `a b c d`, and each round is marked as a column or diagonal round.
+- **Nonce-reuse attack demo** — encrypt two messages with the same key+nonce, see how XORing the ciphertexts cancels the keystream, then **crib-drag**: guess one plaintext and watch the other reappear character-by-character, with no key involved.
 
 ## What Can Go Wrong
 
@@ -34,6 +39,22 @@ The demo includes four interactive sections: an encrypt/decrypt playground where
 - **WireGuard VPN** — Uses ChaCha20-Poly1305 as its sole symmetric cipher for tunnel encryption, chosen for its speed and simplicity.
 - **OpenSSH** — Supports `chacha20-poly1305@openssh.com` as a transport cipher, widely deployed as the default on many distributions.
 - **NaCl / libsodium** — The `crypto_secretbox` API uses XSalsa20-Poly1305 (closely related to XChaCha20), and libsodium also exposes ChaCha20-Poly1305 directly.
+
+## Development
+
+```bash
+npm install      # install dependencies
+npm run dev      # start the Vite dev server
+npm test         # run the test suite (Vitest)
+npm run build    # type-check + production build
+```
+
+### Tests
+
+The suite has two layers, both run in CI before every deploy:
+
+- **Crypto correctness** (`src/chacha20.test.ts`) — verifies the hand-rolled engine against the RFC 8439 §2.1.1 quarter-round and §2.3.2 block test vectors, cross-checks the keystream byte-for-byte against `@noble/ciphers` across multiple blocks, and confirms the encrypt/decrypt round-trip, the two-time-pad XOR property, and the crib-drag recovery.
+- **UI integration** (`src/ui.test.ts`) — boots the real UI against `index.html` in a headless DOM and drives every section the way a user would, catching DOM-wiring regressions.
 
 ---
 

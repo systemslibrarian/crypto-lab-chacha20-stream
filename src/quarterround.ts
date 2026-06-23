@@ -58,9 +58,23 @@ function littleEndian32(bytes: Uint8Array, offset: number): number {
   ) >>> 0;
 }
 
+/**
+ * The 8 quarter-rounds of one double-round, as the matrix indices [a,b,c,d]
+ * each touches. Rows 0–3 are the column rounds; rows 4–7 the diagonal rounds.
+ * (RFC 8439 §2.3.1.)
+ */
+export const QR_INDICES: ReadonlyArray<readonly [number, number, number, number]> = [
+  [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15], // columns
+  [0, 5, 10, 15], [1, 6, 11, 12], [2, 7, 8, 13], [3, 4, 9, 14], // diagonals
+];
+
 export interface ChachaBlockResult {
   initialState: number[];
   rounds: QuarterRoundStep[][];
+  /** The four matrix indices [a,b,c,d] each quarter-round operated on (len 80). */
+  active: ReadonlyArray<readonly [number, number, number, number]>;
+  /** Full 16-word working matrix after each quarter-round (len 80). */
+  snapshots: number[][];
   finalState: number[];
 }
 
@@ -94,43 +108,22 @@ export function chachaBlock(
   const initialState = Array.from(state);
   const working = new Uint32Array(state);
   const rounds: QuarterRoundStep[][] = [];
+  const active: [number, number, number, number][] = [];
+  const snapshots: number[][] = [];
 
-  // 20 rounds = 10 double-rounds (column + diagonal)
-  for (let i = 0; i < 10; i++) {
-    // Column rounds
-    let qr: QuarterRoundStep[];
-    qr = quarterRound(working[0]!, working[4]!, working[8]!, working[12]!);
-    working[0] = qr[3]!.a; working[4] = qr[3]!.b; working[8] = qr[3]!.c; working[12] = qr[3]!.d;
-    rounds.push(qr);
-
-    qr = quarterRound(working[1]!, working[5]!, working[9]!, working[13]!);
-    working[1] = qr[3]!.a; working[5] = qr[3]!.b; working[9] = qr[3]!.c; working[13] = qr[3]!.d;
-    rounds.push(qr);
-
-    qr = quarterRound(working[2]!, working[6]!, working[10]!, working[14]!);
-    working[2] = qr[3]!.a; working[6] = qr[3]!.b; working[10] = qr[3]!.c; working[14] = qr[3]!.d;
-    rounds.push(qr);
-
-    qr = quarterRound(working[3]!, working[7]!, working[11]!, working[15]!);
-    working[3] = qr[3]!.a; working[7] = qr[3]!.b; working[11] = qr[3]!.c; working[15] = qr[3]!.d;
-    rounds.push(qr);
-
-    // Diagonal rounds
-    qr = quarterRound(working[0]!, working[5]!, working[10]!, working[15]!);
-    working[0] = qr[3]!.a; working[5] = qr[3]!.b; working[10] = qr[3]!.c; working[15] = qr[3]!.d;
-    rounds.push(qr);
-
-    qr = quarterRound(working[1]!, working[6]!, working[11]!, working[12]!);
-    working[1] = qr[3]!.a; working[6] = qr[3]!.b; working[11] = qr[3]!.c; working[12] = qr[3]!.d;
-    rounds.push(qr);
-
-    qr = quarterRound(working[2]!, working[7]!, working[8]!, working[13]!);
-    working[2] = qr[3]!.a; working[7] = qr[3]!.b; working[8] = qr[3]!.c; working[13] = qr[3]!.d;
-    rounds.push(qr);
-
-    qr = quarterRound(working[3]!, working[4]!, working[9]!, working[14]!);
-    working[3] = qr[3]!.a; working[4] = qr[3]!.b; working[9] = qr[3]!.c; working[14] = qr[3]!.d;
-    rounds.push(qr);
+  // 20 rounds = 10 double-rounds, each = 4 column + 4 diagonal quarter-rounds.
+  for (let dr = 0; dr < 10; dr++) {
+    for (const [ia, ib, ic, id] of QR_INDICES) {
+      const qr = quarterRound(working[ia]!, working[ib]!, working[ic]!, working[id]!);
+      const last = qr[3]!;
+      working[ia] = last.a;
+      working[ib] = last.b;
+      working[ic] = last.c;
+      working[id] = last.d;
+      rounds.push(qr);
+      active.push([ia, ib, ic, id]);
+      snapshots.push(Array.from(working));
+    }
   }
 
   // Add initial state to working state (mod 2^32)
@@ -139,5 +132,34 @@ export function chachaBlock(
     finalState.push(((working[i]!) + (state[i]!)) >>> 0);
   }
 
-  return { initialState, rounds, finalState };
+  return { initialState, rounds, active, snapshots, finalState };
+}
+
+/**
+ * Serialize the 16 words of a finished block into 64 little-endian keystream
+ * bytes — the exact output ChaCha20 XORs against plaintext (RFC 8439 §2.3).
+ * Lets us prove the hand-rolled engine matches @noble/ciphers byte-for-byte.
+ */
+export function serializeBlock(words: number[]): Uint8Array {
+  const out = new Uint8Array(64);
+  for (let i = 0; i < 16; i++) {
+    const w = words[i]! >>> 0;
+    out[i * 4] = w & 0xff;
+    out[i * 4 + 1] = (w >>> 8) & 0xff;
+    out[i * 4 + 2] = (w >>> 16) & 0xff;
+    out[i * 4 + 3] = (w >>> 24) & 0xff;
+  }
+  return out;
+}
+
+/**
+ * Produce the 64-byte keystream block from the hand-rolled engine.
+ * Convenience wrapper over {@link chachaBlock} + {@link serializeBlock}.
+ */
+export function keystreamBlock(
+  key: Uint8Array,
+  nonce: Uint8Array,
+  counter: number
+): Uint8Array {
+  return serializeBlock(chachaBlock(key, nonce, counter).finalState);
 }

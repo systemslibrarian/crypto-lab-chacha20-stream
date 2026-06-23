@@ -71,6 +71,12 @@ header h1 {
 
 header h1 span { color: var(--accent); }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .header-links {
   display: flex;
   align-items: center;
@@ -288,6 +294,26 @@ textarea:focus {
   font-style: italic;
 }
 
+.avalanche {
+  margin-top: 12px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-align: center;
+}
+
+.avalanche strong { color: var(--accent); }
+
+/* Flash the decrypted box when round-trip recovery succeeds */
+.output-box.recovered {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.3);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
 /* ─── State Matrix ─── */
 #state-matrix {
   display: grid;
@@ -305,6 +331,8 @@ textarea:focus {
   border: 1px solid var(--border);
 }
 
+.matrix-cell { position: relative; transition: transform 0.15s, box-shadow 0.15s; }
+
 .matrix-val { display: block; font-weight: 600; color: var(--text-bright); }
 
 .matrix-lbl {
@@ -315,10 +343,67 @@ textarea:focus {
   text-transform: uppercase;
 }
 
+.matrix-role {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 .matrix-const { background: rgba(88, 166, 255, 0.1); }
 .matrix-key   { background: rgba(63, 185, 80, 0.1); }
 .matrix-ctr   { background: rgba(210, 153, 34, 0.1); }
 .matrix-nonce { background: rgba(248, 81, 73, 0.1); }
+
+/* The 4 cells the current quarter-round is mixing */
+.matrix-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 12px var(--accent-dim);
+  transform: translateY(-2px);
+  z-index: 1;
+}
+
+.matrix-active .matrix-val { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .matrix-cell { transition: none; }
+  .matrix-active { transform: none; }
+}
+
+/* ─── Stepper progress + meta ─── */
+.section-intro {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0 0 14px;
+}
+
+.qr-progress {
+  height: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 12px 0 4px;
+}
+
+.qr-progress-bar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qr-progress-bar { transition: none; }
+}
+
+.rt-col  { color: var(--accent); font-weight: 600; }
+.rt-diag { color: var(--orange); font-weight: 600; }
+
+.hint-msg { color: var(--text-dim); font-size: 0.82rem; }
 
 /* ─── QR Step Table ─── */
 #qr-step-table {
@@ -385,6 +470,51 @@ textarea:focus {
   font-size: 0.9rem;
   margin-top: 16px;
 }
+
+/* ─── Crib-drag ─── */
+.crib-drag {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--orange);
+  border-radius: var(--radius);
+}
+
+.crib-title {
+  font-size: 0.95rem;
+  color: var(--text-bright);
+  margin: 0 0 6px;
+}
+
+.crib-intro {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.crib-input {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin: 4px 0 12px;
+}
+
+.crib-input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px rgba(210, 153, 34, 0.2);
+}
+
+.crib-output { letter-spacing: 0.5px; }
+
+.crib-char { color: var(--green); font-weight: 600; }
+.crib-gap  { color: var(--text-dim); opacity: 0.5; }
 
 .xor-match { color: var(--red); font-weight: 700; }
 .xor-byte  { color: var(--text-dim); }
@@ -517,6 +647,30 @@ textarea:focus {
   .matrix-cell { font-size: 0.6rem; padding: 5px 2px; }
   .matrix-val { font-size: 0.58rem; }
   #qr-step-table table { font-size: 0.68rem; }
+
+  /* iOS zooms the whole page when focusing an input smaller than 16px.
+     Bump editable controls to 16px on small screens to prevent that. */
+  textarea,
+  .crib-input {
+    font-size: 16px;
+  }
+
+  /* Comfortable touch targets (WCAG 2.5.8). Regular buttons get a min height;
+     the small copy/regenerate buttons get more padding so they're tappable. */
+  .btn {
+    min-height: 40px;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+
+  /* Stepper controls span the row evenly instead of crowding */
+  #section-qr .btn-row .btn {
+    flex: 1 1 auto;
+  }
 }
 
 @media (max-width: 400px) {

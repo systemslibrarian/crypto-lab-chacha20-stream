@@ -73,6 +73,22 @@ export function nonceReuseDemo(
   };
 }
 
+/**
+ * Crib-drag: given pt1 ⊕ pt2 (the leak from a nonce-reuse attack) and a guess
+ * for one plaintext, recover the other byte-for-byte —
+ * recovered[i] = (pt1 ⊕ pt2)[i] ⊕ guess[i].
+ * No key is involved: guessing one message reveals the other.
+ */
+export function cribDrag(xorOfPlaintexts: Uint8Array, guess: string): Uint8Array {
+  const g = encoder.encode(guess);
+  const n = Math.min(xorOfPlaintexts.length, g.length);
+  const out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    out[i] = xorOfPlaintexts[i]! ^ g[i]!;
+  }
+  return out;
+}
+
 /** Generate raw keystream bytes by encrypting zeros. */
 export function getKeystream(
   key: Uint8Array,

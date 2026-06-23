@@ -4,8 +4,9 @@
     <meta charset="UTF-8" />
     <script>
       (function () {
-        const saved = localStorage.getItem('theme');
-        document.documentElement.setAttribute('data-theme', saved ?? 'dark');
+        let saved = null;
+        try { saved = localStorage.getItem('theme'); } catch (e) { /* private mode */ }
+        document.documentElement.setAttribute('data-theme', saved || 'dark');
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -19,10 +20,12 @@
       <!-- Header -->
       <header>
         <h1><span>ChaCha20</span> Stream Cipher</h1>
-        <div class="header-links">
-          <a href="https://systemslibrarian.github.io/crypto-lab/">← crypto-lab</a>
+        <div class="header-right">
+          <div class="header-links">
+            <a href="https://systemslibrarian.github.io/crypto-lab/">← crypto-lab</a>
+          </div>
+          <button id="theme-toggle" aria-label="Switch to light mode">🌙</button>
         </div>
-        <button id="theme-toggle" aria-label="Switch to light mode" style="position: absolute; top: 0; right: 0;">🌙</button>
       </header>
 
       <span class="badge">crypto-lab interactive demo</span>
@@ -76,16 +79,23 @@
         </div>
         <div id="keystream-grid" role="img" aria-label="Visual grid of 64 keystream bytes colored by value"></div>
         <p class="ks-label">Same key, different nonce → completely different keystream</p>
+        <div id="avalanche" class="avalanche" role="status" aria-live="polite" hidden></div>
       </div>
 
       <!-- ═══ Section C — Quarter-Round Stepper ═══ -->
       <div class="section" id="section-qr">
         <h2><span class="icon" aria-hidden="true">⚙️</span> Quarter-Round Stepper</h2>
+        <p class="section-intro">Watch the 4×4 state matrix evolve through all 80 quarter-rounds. The four highlighted cells are the words being mixed by the current quarter-round.</p>
         <div class="btn-row">
-          <button class="btn btn-primary" id="btn-run-qr">Run Quarter Round</button>
-          <button class="btn" id="btn-next-round" disabled>Next Quarter-Round</button>
+          <button class="btn btn-primary" id="btn-run-qr">Initialize Block</button>
+          <button class="btn" id="btn-prev-round" disabled aria-label="Previous quarter-round">◀ Prev</button>
+          <button class="btn" id="btn-play-qr" disabled aria-label="Auto-play quarter-rounds">▶ Play</button>
+          <button class="btn" id="btn-next-round" disabled aria-label="Next quarter-round">Next ▶</button>
         </div>
-        <p id="round-label"></p>
+        <div class="qr-progress" role="progressbar" aria-label="Quarter-round progress" aria-valuemin="0" aria-valuemax="80" aria-valuenow="0">
+          <div id="qr-progress-bar" class="qr-progress-bar"></div>
+        </div>
+        <p id="round-label" role="status" aria-live="polite">Press <strong>Initialize Block</strong> to build the state matrix from the current key &amp; nonce.</p>
         <div id="state-matrix"></div>
         <div id="qr-step-table"></div>
       </div>
@@ -114,6 +124,16 @@
         <label class="field-label">ct1 ⊕ ct2 = pt1 ⊕ pt2 (keystream cancelled!)</label>
         <div class="output-box" id="nr-xor"></div>
         <p id="nr-explanation"></p>
+
+        <!-- Crib-drag: turn the leak into recovered plaintext -->
+        <div class="crib-drag" id="crib-drag" hidden>
+          <h3 class="crib-title">🔓 Crib-drag — recover Message 2 from a guess of Message 1</h3>
+          <p class="crib-intro">The keystream is gone, so an attacker who <em>guesses</em> one message instantly recovers the other — <strong>no key required</strong>. The guess is pre-filled with the real Message 1; edit it and watch the recovery degrade character-by-character.</p>
+          <label class="field-label" for="crib-guess">Attacker's guess for Message 1</label>
+          <input type="text" id="crib-guess" class="crib-input" autocomplete="off" spellcheck="false" />
+          <label class="field-label">Recovered Message 2</label>
+          <div class="output-box crib-output" id="crib-output" role="status" aria-live="polite"></div>
+        </div>
 
         <div class="warning-banner" role="alert">
           ⚠ Never reuse a nonce with the same key. This demo shows exactly why.
