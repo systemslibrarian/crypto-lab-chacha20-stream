@@ -1,7 +1,5 @@
 # crypto-lab-chacha20-stream
 
-[![Deploy to GitHub Pages](https://github.com/systemslibrarian/crypto-lab-chacha20-stream/actions/workflows/pages.yml/badge.svg)](https://github.com/systemslibrarian/crypto-lab-chacha20-stream/actions/workflows/pages.yml)
-
 ## What It Is
 
 ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardized in RFC 8439. It encrypts data by XORing plaintext with a pseudorandom keystream generated from a 256-bit key, a 96-bit nonce, and a 32-bit block counter. The cipher uses an ARX construction (Add-Rotate-XOR) that operates entirely with constant-time instructions, providing confidentiality without relying on hardware acceleration. This demo implements the full ChaCha20 block function from scratch for visualization and uses `@noble/ciphers` for production encrypt/decrypt operations. The hand-rolled engine is pinned to the official **RFC 8439 test vectors** and cross-checked byte-for-byte against `@noble/ciphers`, so the visualization is provably correct (see [Development](#development)).
@@ -13,10 +11,11 @@ ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardize
 - **TLS and QUIC cipher suites** — ChaCha20-Poly1305 is a first-class cipher suite in TLS 1.3 and the default in QUIC on devices without AES-NI.
 - **High-throughput stream encryption** — ChaCha20 produces 64 bytes of keystream per block with simple 32-bit operations, making it efficient for bulk data encryption.
 - **Do NOT use ChaCha20 alone for authenticated encryption** — ChaCha20 provides confidentiality only. Always pair it with Poly1305 (or another MAC) to get integrity and authenticity in production systems.
+- **Do NOT treat this as production code** — it is a teaching demo; the hand-rolled block function exists for visualization, and real encryption should use the audited `@noble/ciphers` (or platform crypto) path.
 
 ## Live Demo
 
-**[Launch Demo →](https://systemslibrarian.github.io/crypto-lab-chacha20-stream/)**
+**[systemslibrarian.github.io/crypto-lab-chacha20-stream](https://systemslibrarian.github.io/crypto-lab-chacha20-stream/)**
 
 The demo includes four interactive sections:
 
@@ -40,6 +39,22 @@ The demo includes four interactive sections:
 - **OpenSSH** — Supports `chacha20-poly1305@openssh.com` as a transport cipher, widely deployed as the default on many distributions.
 - **NaCl / libsodium** — The `crypto_secretbox` API uses XSalsa20-Poly1305 (closely related to XChaCha20), and libsodium also exposes ChaCha20-Poly1305 directly.
 
+## How to Run Locally
+
+```bash
+git clone https://github.com/systemslibrarian/crypto-lab-chacha20-stream
+cd crypto-lab-chacha20-stream
+npm install
+npm run dev
+```
+
+## Related Demos
+- [crypto-lab-aes-modes](https://systemslibrarian.github.io/crypto-lab-aes-modes/) — the AES block-cipher modes ChaCha20 is the software-friendly alternative to.
+- [crypto-lab-otp-vault](https://systemslibrarian.github.io/crypto-lab-otp-vault/) — the one-time pad and two-time-pad / crib-dragging attack the nonce-reuse demo mirrors.
+- [crypto-lab-nonce-guard](https://systemslibrarian.github.io/crypto-lab-nonce-guard/) — AES-GCM / AES-GCM-SIV nonce-misuse resistance, the AEAD counterpart to ChaCha20's nonce hazard.
+- [crypto-lab-poly1305-mac](https://systemslibrarian.github.io/crypto-lab-poly1305-mac/) — Poly1305, the MAC paired with ChaCha20 to make the authenticated ChaCha20-Poly1305 AEAD.
+- [crypto-lab-shadow-vault](https://systemslibrarian.github.io/crypto-lab-shadow-vault/) — applied file encryption using ChaCha20-Poly1305 with Argon2id.
+
 ## Development
 
 ```bash
@@ -58,14 +73,6 @@ The suite has two layers, both run in CI before every deploy:
 
 ---
 
-### Cross-links
+*One of 60+ browser demos in the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
 
-- [AES Modes](https://systemslibrarian.github.io/crypto-lab-aes-modes/)
-- [Shadow Vault](https://systemslibrarian.github.io/crypto-lab-shadow-vault/)
-- [Ratchet Wire](https://systemslibrarian.github.io/crypto-lab-ratchet-wire/)
-- [Noise Pipe](https://systemslibrarian.github.io/crypto-lab-noise-pipe/)
-- [crypto-lab home](https://systemslibrarian.github.io/crypto-lab/)
-
----
-
-"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31
+*"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
