@@ -66,13 +66,43 @@ function copyToClipboard(text: string, btn: HTMLElement) {
     .catch(() => restore('Failed'));
 }
 
-function byteColor(byte: number): string {
-  // gradient: low=blue (#3b82f6), high=red (#ef4444)
+/** WCAG relative luminance of an sRGB colour (0–1). */
+function relLuminance(r: number, g: number, b: number): number {
+  const lin = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/** WCAG contrast ratio between two relative luminances. */
+function contrast(l1: number, l2: number): number {
+  const [hi, lo] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * Map a keystream byte to a {bg, fg} pair for its grid cell. The hue still
+ * encodes magnitude (low = blue, high = red), but every colour is dark enough
+ * that white label text clears the WCAG AA 4.5:1 contrast threshold — the
+ * a11y gate scans this grid, so the visual encoding can't cost readability.
+ */
+function byteColor(byte: number): { bg: string; fg: string } {
   const t = byte / 255;
-  const r = Math.round(59 + t * (239 - 59));
-  const g = Math.round(130 + t * (68 - 130));
-  const b = Math.round(246 + t * (68 - 246));
-  return `rgb(${r},${g},${b})`;
+  // Darkened blue→red gradient; endpoints chosen so the brightest cell keeps
+  // white text >=4.5:1 (relative luminance stays below ~0.18 across the ramp).
+  let r = Math.round(37 + t * (176 - 37));
+  let g = Math.round(78 + t * (30 - 78));
+  let b = Math.round(148 + t * (30 - 148));
+  // Defensive guard: if any interpolated colour ever crept above the threshold,
+  // scale it down until white text passes. Keeps the fix robust to tweaks.
+  const white = 1;
+  while (contrast(relLuminance(r, g, b), white) < 4.5) {
+    r = Math.round(r * 0.92);
+    g = Math.round(g * 0.92);
+    b = Math.round(b * 0.92);
+  }
+  return { bg: `rgb(${r},${g},${b})`, fg: '#ffffff' };
 }
 
 // ─── Section A: Encrypt/Decrypt ──────────────────────────────
@@ -181,8 +211,9 @@ function initKeystreamViz() {
       cell.className = 'ks-cell';
       cell.textContent = ks[i]!.toString(16).padStart(2, '0');
       cell.title = `byte ${i}: ${ks[i]} (0x${ks[i]!.toString(16).padStart(2, '0')})`;
-      cell.style.backgroundColor = byteColor(ks[i]!);
-      cell.style.color = ks[i]! > 140 ? '#fff' : '#1e1e2e';
+      const { bg, fg } = byteColor(ks[i]!);
+      cell.style.backgroundColor = bg;
+      cell.style.color = fg;
       grid.appendChild(cell);
     }
   }

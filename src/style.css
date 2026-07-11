@@ -237,7 +237,16 @@ header h1 span { color: var(--accent); }
   border-color: var(--accent);
 }
 
-.btn-primary:hover { opacity: 0.9; background-color: var(--accent); }
+/* Hover darkens/lightens the accent per theme instead of using opacity.
+   opacity:0.9 blended the accent toward the page background, which dropped
+   white-on-#0969da (light theme) to 4.42:1 — below AA. Shifting the background
+   colour keeps the button->text contrast >=4.5:1 in both themes. */
+.btn-primary:hover {
+  background-color: color-mix(in srgb, var(--accent) 88%, #fff);
+}
+[data-theme="light"] .btn-primary:hover {
+  background-color: color-mix(in srgb, var(--accent) 88%, #000);
+}
 
 .btn-sm { font-size: 0.72rem; padding: 3px 8px; }
 
