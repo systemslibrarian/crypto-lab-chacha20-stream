@@ -134,16 +134,20 @@
 <!-- END crypto-lab shared header -->
     <div class="container">
 
-      <!-- Header -->
-      <header>
-        <h1><span>ChaCha20</span> Stream Cipher</h1>
-        <div class="header-right">
-          <div class="header-links">
-            <a href="https://systemslibrarian.github.io/crypto-lab/">← crypto-lab</a>
-          </div>
-          <button id="theme-toggle" aria-label="Switch to light mode">🌙</button>
+      <!-- Header / Hero -->
+      <header class="cl-hero">
+        <div class="cl-hero-main">
+          <h1 class="cl-hero-title">ChaCha20</h1>
+          <p class="cl-hero-sub">Stream Cipher · ARX · RFC 8439</p>
+          <p class="cl-hero-desc">Encrypt and decrypt with ChaCha20 while watching the ARX quarter-round build a keystream, then XOR it against your message — and see a reused nonce collapse into a two-time pad.</p>
         </div>
+        <aside class="cl-hero-why" aria-label="Why it matters">
+          <span class="cl-hero-why-label">WHY IT MATTERS</span>
+          <p class="cl-hero-why-text">ChaCha20 secures TLS 1.3, QUIC, and Android traffic on hardware that lacks fast, constant-time AES. Its safety hinges on one rule: never repeat a nonce under the same key, or an attacker recovers plaintext with no key at all.</p>
+        </aside>
       </header>
+      <!-- in-page theme toggle: hidden by shared topbar CSS, kept for lab theme JS -->
+      <button id="theme-toggle" aria-label="Switch to light mode">🌙</button>
 
       <span class="badge">crypto-lab interactive demo</span>
 
