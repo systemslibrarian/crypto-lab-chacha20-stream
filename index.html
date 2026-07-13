@@ -151,6 +151,30 @@
 
       <span class="badge">crypto-lab interactive demo</span>
 
+      <!-- ═══ Plain-language preamble — the one idea a newcomer needs first ═══ -->
+      <div class="section primer" id="section-primer">
+        <h2><span class="icon" aria-hidden="true">🧭</span> Start here: what is a stream cipher?</h2>
+        <p class="primer-lead">
+          A <strong>stream cipher</strong> turns a secret <strong>key</strong> plus a
+          one-time <strong>nonce</strong> into a long, random-looking
+          <strong>keystream</strong>, then <strong>XOR</strong>s that keystream with your
+          message to encrypt it. Decryption is the same XOR again, because
+          <code>x ⊕ y ⊕ y = x</code>. The whole cipher rests on one equation you'll see
+          live below:
+        </p>
+        <p class="primer-eq"><code>ciphertext = plaintext ⊕ keystream</code></p>
+        <dl class="glossary">
+          <div><dt>Key</dt><dd>256-bit secret shared by sender and receiver. Same key both ways.</dd></div>
+          <div><dt>Nonce</dt><dd>"Number used once" — a 96-bit public value that must never repeat under one key.</dd></div>
+          <div><dt>Keystream</dt><dd>The pseudorandom bytes ChaCha20 derives from key + nonce. As long as your message.</dd></div>
+          <div><dt>XOR (⊕)</dt><dd>Bit-wise exclusive-or: 1 if the two bits differ, else 0. Its own inverse.</dd></div>
+        </dl>
+        <p class="primer-note">
+          The rule in one line: <strong>the nonce must never repeat under the same key</strong>.
+          Section 4 shows what an attacker does the moment it does.
+        </p>
+      </div>
+
       <!-- ═══ Section A — Encrypt / Decrypt Playground ═══ -->
       <div class="section" id="section-encrypt">
         <h2><span class="icon" aria-hidden="true">🔐</span> Encrypt / Decrypt Playground</h2>
@@ -175,6 +199,20 @@
         <textarea id="plaintext-input" rows="3" placeholder="Type a message to encrypt…">The quick brown fox jumps over the lazy dog</textarea>
         <span class="byte-tag" id="pt-len">43 bytes</span>
 
+        <!-- The load-bearing intuition: ct[i] = pt[i] XOR ks[i], shown byte-aligned
+             where encryption actually happens. Keystream comes from the same
+             hand-rolled engine that Section 3 steps through. -->
+        <p class="xor-caption" id="xor-caption">
+          Here is the whole cipher, one byte per column: your
+          <span class="xor-key-pt">plaintext</span> XOR the
+          <span class="xor-key-ks">keystream</span> gives the
+          <span class="xor-key-ct">ciphertext</span>. Hover or focus a column to
+          trace one byte through <code>ct = pt ⊕ ks</code>.
+        </p>
+        <div class="xor-viz" id="xor-viz" tabindex="0" role="group"
+             aria-labelledby="xor-caption"
+             aria-label="Byte-by-byte view of ciphertext equals plaintext XOR keystream. Scroll horizontally to see all bytes."></div>
+
         <div class="btn-row">
           <button class="btn btn-primary" id="btn-encrypt">Encrypt</button>
           <button class="btn" id="btn-decrypt">Decrypt</button>
@@ -197,10 +235,33 @@
         <div class="btn-row">
           <button class="btn btn-primary" id="btn-show-keystream">Show Keystream (64 bytes)</button>
           <button class="btn" id="btn-new-nonce-ks">Regenerate Nonce → New Keystream</button>
+          <button class="btn" id="btn-flip-bit">Flip 1 nonce bit (avalanche)</button>
         </div>
         <div id="keystream-grid" role="img" aria-label="Visual grid of 64 keystream bytes colored by value"></div>
         <p class="ks-label">Same key, different nonce → completely different keystream</p>
+        <p class="ks-colornote">
+          Colour encodes byte <em>value</em> only (low = blue, high = red) so the grid
+          is easy to scan — it carries <strong>no</strong> cryptographic meaning. The
+          real "is it random?" signal is the avalanche stat below, not any pattern in the hues.
+        </p>
         <div id="avalanche" class="avalanche" role="status" aria-live="polite" hidden></div>
+
+        <!-- Single-bit avalanche: flip ONE nonce bit and show before/after grids
+             side by side. Diffusion felt, not just reported. -->
+        <div id="avalanche-compare" class="avalanche-compare" hidden>
+          <div class="ac-pair">
+            <div class="ac-col">
+              <span class="ac-head" id="ac-before-head">Before — original nonce</span>
+              <div class="ac-grid" id="ac-grid-before" role="img" aria-labelledby="ac-before-head"></div>
+            </div>
+            <div class="ac-op" aria-hidden="true">→ flip 1 bit →</div>
+            <div class="ac-col">
+              <span class="ac-head" id="ac-after-head">After — one nonce bit flipped</span>
+              <div class="ac-grid" id="ac-grid-after" role="img" aria-labelledby="ac-after-head"></div>
+            </div>
+          </div>
+          <p class="ac-caption" id="ac-caption" role="status" aria-live="polite"></p>
+        </div>
       </div>
 
       <!-- ═══ Section C — Quarter-Round Stepper ═══ -->
@@ -218,6 +279,9 @@
         </div>
         <p id="round-label" role="status" aria-live="polite">Press <strong>Initialize Block</strong> to build the state matrix from the current key &amp; nonce.</p>
         <div id="state-matrix"></div>
+        <!-- Plain-English narration of the current step: converts ARX pseudocode
+             into what add/xor/rotate actually DO, and why mixing diffuses bits. -->
+        <p id="qr-narrate" class="qr-narrate" role="status" aria-live="polite" hidden></p>
         <div id="qr-step-table"></div>
       </div>
 

@@ -114,6 +114,132 @@ body {
   margin-bottom: 24px;
 }
 
+/* ─── Primer / glossary (plain-language on-ramp) ─── */
+.primer-lead {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+.primer-lead code,
+.primer-eq code,
+.xor-caption code,
+.qr-narrate code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background-color: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent);
+}
+
+.primer-eq {
+  text-align: center;
+  margin: 10px 0 14px;
+}
+
+.primer-eq code {
+  font-size: 1rem;
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  background-color: var(--accent-dim);
+}
+
+.glossary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+}
+
+@media (max-width: 600px) {
+  .glossary { grid-template-columns: 1fr; }
+}
+
+.glossary dt {
+  font-weight: 700;
+  color: var(--text-bright);
+  font-size: 0.85rem;
+}
+
+.glossary dd {
+  margin: 0 0 2px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.primer-note {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 6px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--orange);
+  background-color: rgba(210, 153, 34, 0.08);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* ─── Section A: XOR visual (ct = pt ⊕ ks) ─── */
+.xor-caption {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 14px 0 8px;
+}
+
+.xor-key-pt { color: var(--accent); font-weight: 700; }
+.xor-key-ks { color: var(--orange); font-weight: 700; }
+.xor-key-ct { color: var(--green); font-weight: 700; }
+
+.xor-viz {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--bg-input);
+}
+
+.xor-viz:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.xor-grid {
+  display: grid;
+  gap: 2px;
+  grid-auto-flow: row;
+  min-width: min-content;
+}
+
+.xor-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  padding: 4px 2px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+
+.xor-glyph { font-size: 0.8rem; font-weight: 700; }
+.xor-hex { font-size: 0.66rem; color: var(--text-dim); }
+
+.xor-row-pt { background-color: rgba(88, 166, 255, 0.12); }
+.xor-row-pt .xor-glyph { color: var(--accent); }
+.xor-row-ks { background-color: rgba(210, 153, 34, 0.12); }
+.xor-row-ks .xor-glyph { color: var(--orange); }
+.xor-row-ct { background-color: rgba(63, 185, 80, 0.12); }
+.xor-row-ct .xor-glyph { color: var(--green); }
+
+.xor-cell.xor-col-active {
+  border-color: var(--text-bright);
+  box-shadow: 0 0 0 1px var(--text-bright);
+}
+
 /* ─── Sections ─── */
 .section {
   background-color: var(--bg-card);
@@ -301,6 +427,91 @@ textarea:focus {
 
 .avalanche strong { color: var(--accent); }
 
+.ks-colornote {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.ks-colornote strong { color: var(--text); }
+
+/* ─── Single-bit avalanche comparison ─── */
+.avalanche-compare {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--bg-input);
+}
+
+.ac-pair {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ac-col { flex: 1 1 240px; min-width: 0; }
+
+.ac-head {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.ac-op {
+  align-self: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  /* --text (not --orange): #9a6700 on the light --bg-input sits below 4.5:1.
+     --text clears AA in both themes and the arrow already reads as an operator. */
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.ac-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+
+.ac-cell {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  text-align: center;
+  padding: 4px 1px;
+  border-radius: 2px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+/* Changed cells: outline + text glyph independent of colour (a11y — not colour alone) */
+.ac-cell-changed {
+  border-color: var(--text-bright);
+  box-shadow: 0 0 0 1px var(--text-bright);
+}
+
+.ac-caption {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.ac-caption strong { color: var(--accent); }
+
+@media (max-width: 520px) {
+  .ac-op { transform: rotate(90deg); align-self: center; }
+}
+
 /* Flash the decrypted box when round-trip recovery succeeds */
 .output-box.recovered {
   border-color: var(--green);
@@ -360,6 +571,35 @@ textarea:focus {
 }
 
 .matrix-active .matrix-val { color: var(--accent); }
+
+/* A word whose VALUE actually changed in the current quarter-round. Marked with
+   a green ring + a ▲ glyph so it reads without relying on colour alone. */
+.matrix-changed::after {
+  content: "▲ changed";
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.02em;
+}
+
+.matrix-changed { box-shadow: inset 0 0 0 1px var(--green); }
+
+.qr-narrate {
+  margin: 10px 0 4px;
+  padding: 10px 14px;
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--text);
+  background-color: var(--accent-dim);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.qr-narrate strong { color: var(--text-bright); }
 
 @media (prefers-reduced-motion: reduce) {
   .matrix-cell { transition: none; }

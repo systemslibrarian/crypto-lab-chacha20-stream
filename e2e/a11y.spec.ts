@@ -37,6 +37,9 @@ async function driveDemos(page: Page): Promise<void> {
   // Section B — keystream visualizer + avalanche panel (starts [hidden]).
   await page.locator('#btn-show-keystream').click();
   await page.locator('#btn-new-nonce-ks').click();
+  // Single-bit avalanche comparison panel (starts [hidden]).
+  await page.locator('#btn-flip-bit').click();
+  await expect(page.locator('#avalanche-compare')).toBeVisible();
 
   // Section C — quarter-round stepper: build the matrix and step it.
   await page.locator('#btn-run-qr').click();

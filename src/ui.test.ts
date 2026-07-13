@@ -37,6 +37,39 @@ describe('UI integration', () => {
     expect($('#ciphertext-display').textContent).toMatch(/^[0-9a-f]+$/);
   });
 
+  it('Section A XOR visual is honest: pt ⊕ ks equals the ciphertext byte-for-byte', () => {
+    // Three rows (pt, ks, ct), one column per plaintext byte. Read the hex out
+    // of each row and verify pt[i] ^ ks[i] === ct[i] for every byte — this
+    // guards against the visual ever faking the keystream or the XOR.
+    const cells = [...$('#xor-viz').querySelectorAll('.xor-cell')] as HTMLElement[];
+    expect(cells.length).toBeGreaterThan(0);
+    expect(cells.length % 3).toBe(0);
+    const n = cells.length / 3;
+    const hexOf = (el: HTMLElement) =>
+      parseInt(el.querySelector('.xor-hex')!.textContent!, 16);
+    for (let i = 0; i < n; i++) {
+      const pt = hexOf(cells[i]!);
+      const ks = hexOf(cells[n + i]!);
+      const ct = hexOf(cells[2 * n + i]!);
+      expect((pt ^ ks) & 0xff).toBe(ct);
+    }
+    // And the ct row must equal the ciphertext shown in the output box.
+    const ctHex = Array.from({ length: n }, (_, i) =>
+      hexOf(cells[2 * n + i]!).toString(16).padStart(2, '0')).join('');
+    expect($('#ciphertext-display').textContent).toBe(ctHex);
+  });
+
+  it('single-bit avalanche renders before/after grids with changed cells flagged', () => {
+    click('#btn-flip-bit');
+    expect($('#avalanche-compare').hasAttribute('hidden')).toBe(false);
+    expect($('#ac-grid-before').children).toHaveLength(64);
+    expect($('#ac-grid-after').children).toHaveLength(64);
+    // A one-bit nonce change must flip a large fraction of bytes (diffusion).
+    const changed = document.querySelectorAll('#ac-grid-after .ac-cell-changed').length;
+    expect(changed).toBeGreaterThan(40);
+    expect($('#ac-caption').textContent).toMatch(/512/);
+  });
+
   it('round-trips: decrypt recovers the plaintext', () => {
     const pt = ($('#plaintext-input') as HTMLTextAreaElement).value;
     click('#btn-decrypt');
@@ -77,6 +110,11 @@ describe('UI integration', () => {
     click('#btn-next-round'); // first quarter-round
     expect(document.querySelectorAll('.matrix-active')).toHaveLength(4);
     expect($('#round-label').textContent).toMatch(/quarter-round 1\/80/);
+    // Plain-English narration is revealed and describes the ARX mechanism.
+    expect($('#qr-narrate').hasAttribute('hidden')).toBe(false);
+    expect($('#qr-narrate').textContent).toMatch(/Add.?Rotate.?XOR|diffusion/);
+    // At least one active word changed value and is flagged.
+    expect(document.querySelectorAll('.matrix-changed').length).toBeGreaterThan(0);
 
     // Step to the end.
     for (let i = 0; i < 81; i++) click('#btn-next-round');

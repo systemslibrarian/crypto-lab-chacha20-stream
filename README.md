@@ -17,12 +17,12 @@ ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardize
 
 **[systemslibrarian.github.io/crypto-lab-chacha20-stream](https://systemslibrarian.github.io/crypto-lab-chacha20-stream/)**
 
-The demo includes four interactive sections:
+A plain-language primer opens the page — defining stream cipher, key, nonce, keystream, and XOR, and stating the one equation the rest of the page makes visible: **ciphertext = plaintext ⊕ keystream**. Below it are four interactive sections:
 
-- **Encrypt / decrypt playground** — generate keys and nonces, type plaintext, and watch ciphertext update live as you type; the Decrypt button proves the round-trip recovery.
-- **Keystream visualizer** — 64 bytes shown as a color-coded grid that changes completely when you regenerate the nonce, with an **avalanche readout** quantifying how many of the 512 keystream bits flipped (~50% for an ideal cipher).
-- **Quarter-round stepper** — step or auto-play through all 80 quarter-rounds, watching the 4×4 state matrix mutate cell-by-cell. The four words being mixed are highlighted and labeled `a b c d`, and each round is marked as a column or diagonal round.
-- **Nonce-reuse attack demo** — encrypt two messages with the same key+nonce, see how XORing the ciphertexts cancels the keystream, then **crib-drag**: guess one plaintext and watch the other reappear character-by-character, with no key involved.
+1. **Encrypt / decrypt playground** — generate keys and nonces, type plaintext, and watch ciphertext update live as you type; the Decrypt button proves the round-trip recovery. Directly under the message, a **byte-aligned XOR visual** shows three rows — plaintext, keystream (from the same hand-rolled engine), and their XOR — column by column, so you literally see `ct[i] = pt[i] ⊕ ks[i]` where encryption happens. Hover or arrow-key a column to trace one byte through the XOR.
+2. **Keystream visualizer** — 64 bytes shown as a color-coded grid (colour encodes byte *value* only, not meaning) that changes completely when you regenerate the nonce, with an **avalanche readout** quantifying how many of the 512 keystream bits flipped (~50% for an ideal cipher). A **single-bit avalanche** control flips one nonce bit and shows the before/after keystreams side by side, changed cells flagged, so diffusion is felt rather than reported.
+3. **Quarter-round stepper** — step or auto-play through all 80 quarter-rounds, watching the 4×4 state matrix mutate cell-by-cell. The four words being mixed are highlighted and labeled `a b c d`, each round is marked column or diagonal, and a **plain-English narration** describes what the current Add–Rotate–XOR step actually does and why alternating column/diagonal rounds produce diffusion.
+4. **Nonce-reuse attack demo** — encrypt two messages with the same key+nonce, see how XORing the ciphertexts cancels the keystream, then **crib-drag**: guess one plaintext and watch the other reappear character-by-character, with no key involved.
 
 ## What Can Go Wrong
 

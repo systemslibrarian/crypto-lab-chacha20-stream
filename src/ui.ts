@@ -7,6 +7,7 @@ import {
   nonceReuseDemo,
   cribDrag,
   toHex,
+  getKeystream,
 } from './cipher.ts';
 import { chachaBlock, keystreamBlock } from './quarterround.ts';
 import type { ChachaBlockResult } from './quarterround.ts';
@@ -116,6 +117,80 @@ function initEncryptDecrypt() {
   const nonceLen = $('#nonce-len') as HTMLElement;
   const ptLen = $('#pt-len') as HTMLElement;
   const ctLen = $('#ct-len') as HTMLElement;
+  const xorViz = $('#xor-viz') as HTMLElement;
+
+  const hx = (b: number) => b.toString(16).padStart(2, '0');
+
+  /**
+   * Draw the load-bearing intuition: for each byte, a column showing
+   * pt[i] ⊕ ks[i] = ct[i]. Keystream comes from the SAME hand-rolled engine
+   * Section 3 steps through (getKeystream), so the numbers are honest, not faked.
+   * Hover/focus a column highlights that byte across all three rows.
+   */
+  function renderXorViz(pt: string) {
+    xorViz.innerHTML = '';
+    const ptBytes = new TextEncoder().encode(pt);
+    if (ptBytes.length === 0) return;
+    const ks = getKeystream(currentKey, currentNonce, ptBytes.length);
+
+    const rows = [
+      { cls: 'xor-row-pt', op: '', name: 'plaintext' },
+      { cls: 'xor-row-ks', op: '⊕', name: 'keystream' },
+      { cls: 'xor-row-ct', op: '=', name: 'ciphertext' },
+    ];
+    // Build one grid; each byte is a column of 3 stacked cells so columns align.
+    const grid = document.createElement('div');
+    grid.className = 'xor-grid';
+    grid.style.gridTemplateColumns = `repeat(${ptBytes.length}, minmax(1.7rem, 1fr))`;
+
+    for (let r = 0; r < rows.length; r++) {
+      for (let i = 0; i < ptBytes.length; i++) {
+        const ct = (ptBytes[i]! ^ ks[i]!) >>> 0;
+        const cell = document.createElement('div');
+        cell.className = `xor-cell ${rows[r]!.cls}`;
+        cell.dataset.col = String(i);
+        let val: string;
+        if (r === 0) {
+          const b = ptBytes[i]!;
+          const printable = b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : '·';
+          val = `<span class="xor-glyph">${printable === ' ' ? '␣' : printable
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span><span class="xor-hex">${hx(b)}</span>`;
+        } else if (r === 1) {
+          val = `<span class="xor-glyph">${rows[r]!.op}</span><span class="xor-hex">${hx(ks[i]!)}</span>`;
+        } else {
+          val = `<span class="xor-glyph">${rows[r]!.op}</span><span class="xor-hex">${hx(ct)}</span>`;
+        }
+        cell.innerHTML = val;
+        grid.appendChild(cell);
+      }
+    }
+    xorViz.appendChild(grid);
+
+    // Column highlight on hover/focus — learner traces one byte through the XOR.
+    let active = -1;
+    const setActive = (col: number) => {
+      if (col === active) return;
+      grid.querySelectorAll('.xor-col-active').forEach((el) => el.classList.remove('xor-col-active'));
+      if (col >= 0) {
+        grid.querySelectorAll(`.xor-cell[data-col="${col}"]`).forEach((el) => el.classList.add('xor-col-active'));
+      }
+      active = col;
+    };
+    grid.addEventListener('mouseover', (e) => {
+      const c = (e.target as HTMLElement).closest('.xor-cell') as HTMLElement | null;
+      if (c) setActive(Number(c.dataset.col));
+    });
+    grid.addEventListener('mouseleave', () => setActive(-1));
+    // Keyboard: the container is focusable; arrow keys walk columns.
+    let kb = 0;
+    xorViz.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        kb = Math.max(0, Math.min(ptBytes.length - 1, kb + (e.key === 'ArrowRight' ? 1 : -1)));
+        setActive(kb);
+        e.preventDefault();
+      }
+    });
+  }
 
   function refreshKeyNonce() {
     keyDisplay.textContent = toHex(currentKey);
@@ -134,12 +209,14 @@ function initEncryptDecrypt() {
       ctDisplay.textContent = '';
       ctLen.textContent = '';
       decryptedDisplay.textContent = '';
+      xorViz.innerHTML = '';
       return;
     }
     lastCiphertext = encrypt(pt, currentKey, currentNonce);
     ctDisplay.textContent = toHex(lastCiphertext);
     ctLen.textContent = `${lastCiphertext.length} bytes`;
     decryptedDisplay.textContent = '';
+    renderXorViz(pt);
   }
 
   refreshKeyNonce();
@@ -227,6 +304,49 @@ function initKeystreamViz() {
       `from a single new nonce — an ideal cipher changes ~50%.`;
   }
 
+  // ── Single-bit avalanche: flip ONE nonce bit and compare keystreams ──
+  const compareBox = $('#avalanche-compare') as HTMLElement;
+  const gridBefore = $('#ac-grid-before') as HTMLElement;
+  const gridAfter = $('#ac-grid-after') as HTMLElement;
+  const acCaption = $('#ac-caption') as HTMLElement;
+
+  /** Render a compact 8-col keystream grid; `diff` marks changed bytes. */
+  function renderMiniGrid(target: HTMLElement, ks: Uint8Array, diff?: Uint8Array) {
+    target.innerHTML = '';
+    for (let i = 0; i < ks.length; i++) {
+      const cell = document.createElement('div');
+      const changed = diff && ks[i] !== diff[i];
+      cell.className = `ac-cell${changed ? ' ac-cell-changed' : ''}`;
+      cell.textContent = ks[i]!.toString(16).padStart(2, '0');
+      const { bg, fg } = byteColor(ks[i]!);
+      cell.style.backgroundColor = bg;
+      cell.style.color = fg;
+      target.appendChild(cell);
+    }
+  }
+
+  function runSingleBitAvalanche() {
+    const before = keystreamBlock(currentKey, currentNonce, 0);
+    // Flip the lowest bit of the first nonce byte — a genuine one-bit change.
+    const flipped = new Uint8Array(currentNonce);
+    flipped[0] = flipped[0]! ^ 0x01;
+    const after = keystreamBlock(currentKey, flipped, 0);
+
+    renderMiniGrid(gridBefore, before, after);
+    renderMiniGrid(gridAfter, after, before);
+
+    const bits = bitsDiffer(before, after);
+    const pct = ((bits / 512) * 100).toFixed(1);
+    acCaption.innerHTML =
+      `One nonce bit changed (the low bit of byte 0). Result: <strong>${bits} of 512</strong> ` +
+      `keystream bits flipped (<strong>${pct}%</strong>), spread across the whole block — ` +
+      `an ideal cipher flips ~50%. Highlighted cells changed value. This is diffusion: ` +
+      `a single input bit avalanches into half the output.`;
+    compareBox.hidden = false;
+  }
+
+  $('#btn-flip-bit').addEventListener('click', runSingleBitAvalanche);
+
   // Re-render whenever the key or nonce changes anywhere. A nonce change shows
   // the avalanche stat; a key change just refreshes the grid (and hides a now
   // meaningless stat).
@@ -253,6 +373,7 @@ function initKeystreamViz() {
 function initQuarterRoundStepper() {
   const stateGrid = $('#state-matrix') as HTMLElement;
   const stepTable = $('#qr-step-table') as HTMLElement;
+  const narrate = $('#qr-narrate') as HTMLElement;
   const roundLabel = $('#round-label') as HTMLElement;
   const progress = $('.qr-progress') as HTMLElement;
   const progressBar = $('#qr-progress-bar') as HTMLElement;
@@ -276,13 +397,18 @@ function initQuarterRoundStepper() {
     return '0x' + (v >>> 0).toString(16).padStart(8, '0');
   }
 
-  function renderMatrix(state: number[], active: readonly number[] = []) {
+  function renderMatrix(
+    state: number[],
+    active: readonly number[] = [],
+    changed: ReadonlySet<number> = new Set(),
+  ) {
     const activeSet = new Set(active);
     stateGrid.innerHTML = '';
     for (let i = 0; i < 16; i++) {
       const cell = document.createElement('div');
       const role = active.indexOf(i);
-      cell.className = `matrix-cell matrix-${LABELS[i]}${activeSet.has(i) ? ' matrix-active' : ''}`;
+      const changedCls = changed.has(i) ? ' matrix-changed' : '';
+      cell.className = `matrix-cell matrix-${LABELS[i]}${activeSet.has(i) ? ' matrix-active' : ''}${changedCls}`;
       const tag = role >= 0 ? `<span class="matrix-role">${'abcd'[role]}</span>` : '';
       cell.innerHTML = `${tag}<span class="matrix-val">${hex32(state[i]!)}</span><span class="matrix-lbl">${LABELS[i]}</span>`;
       stateGrid.appendChild(cell);
@@ -324,11 +450,17 @@ function initQuarterRoundStepper() {
       stepTable.innerHTML =
         '<p class="hint-msg">Initial state: constants + key + counter + nonce. Press <strong>Next ▶</strong> to apply the first quarter-round.</p>';
       roundLabel.innerHTML = 'Initial state — <strong>0 of 80</strong> quarter-rounds applied';
+      narrate.hidden = true;
       setProgress(0);
     } else if (step <= TOTAL) {
       const idx = step - 1;
       const active = blockResult.active[idx]!;
-      renderMatrix(blockResult.snapshots[idx]!, active);
+      const snap = blockResult.snapshots[idx]!;
+      // Which of the 16 words changed value in THIS quarter-round.
+      const prev = idx === 0 ? blockResult.initialState : blockResult.snapshots[idx - 1]!;
+      const changed = new Set<number>();
+      for (const i of active) if (snap[i] !== prev[i]) changed.add(i);
+      renderMatrix(snap, active, changed);
       renderSteps(blockResult.rounds[idx]!);
       const local = idx % 8;
       const isColumn = local < 4;
@@ -337,12 +469,30 @@ function initQuarterRoundStepper() {
       roundLabel.innerHTML =
         `Double-round <strong>${dr}/10</strong> · <span class="${isColumn ? 'rt-col' : 'rt-diag'}">${isColumn ? 'Column' : 'Diagonal'} round</span> · ` +
         `quarter-round <strong>${step}/80</strong> mixing words ${positions}`;
+      narrate.hidden = false;
+      const [ia, ib, ic, id] = active;
+      const roundKind = isColumn
+        ? `This is a <span class="rt-col">column</span> round: it mixes four words stacked <em>vertically</em>.`
+        : `This is a <span class="rt-diag">diagonal</span> round: it mixes four words along a <em>diagonal</em>. Alternating column and diagonal rounds is what carries a change in one word out to <em>every</em> word — that cross-wiring is exactly what the diagonal rounds buy you.`;
+      narrate.innerHTML =
+        `<strong>What this quarter-round does</strong> to words a=${ia}, b=${ib}, c=${ic}, d=${id}: ` +
+        `it runs four <strong>Add–Rotate–XOR</strong> (ARX) steps — e.g. <em>add b into a (wrapping at 2³²), ` +
+        `XOR that result into d, then rotate d left 16 bits</em>, repeated with rotations of 12, 8, and 7. ` +
+        `Add and rotate move bits between positions; XOR blends them. Together they take a one-bit change ` +
+        `and smear it across the whole word — that spreading is <strong>diffusion</strong>, the source of the ` +
+        `pseudorandom keystream. ${roundKind}`;
       setProgress(step);
     } else {
       renderMatrix(blockResult.finalState);
       stepTable.innerHTML =
         '<p class="done-msg">✓ All 80 quarter-rounds complete. Final state = scrambled working state + initial state (mod 2³²). Serializing these 16 words little-endian yields the 64-byte keystream.</p>';
       roundLabel.innerHTML = '<strong>Complete</strong> — final state ready to serialize into keystream';
+      narrate.hidden = false;
+      narrate.innerHTML =
+        `<strong>Why 80 quarter-rounds?</strong> That is 10 double-rounds (20 rounds). Each double-round is ` +
+        `4 column + 4 diagonal quarter-rounds; the alternation guarantees full <strong>avalanche</strong> — ` +
+        `every input bit reaches every output word — with a comfortable security margin against known attacks. ` +
+        `Fewer rounds diffuse less; 20 is the standardized count.`;
       setProgress(TOTAL);
     }
 
