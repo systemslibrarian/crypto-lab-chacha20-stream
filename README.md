@@ -73,6 +73,4 @@ The suite has two layers, both run in CI before every deploy:
 
 ---
 
-*One of 120+ browser demos in the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
-
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
