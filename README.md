@@ -33,7 +33,7 @@ A plain-language primer opens the page — defining stream cipher, key, nonce, k
 
 ## Real-World Usage
 
-- **TLS 1.3 (RFC 8446)** — ChaCha20-Poly1305 is a mandatory-to-implement cipher suite, used as the preferred cipher when AES-NI is unavailable.
+- **TLS 1.3 (RFC 8446)** — `TLS_CHACHA20_POLY1305_SHA256` is a SHOULD-implement cipher suite (§9.1 makes only `TLS_AES_128_GCM_SHA256` mandatory), used as the preferred cipher when AES-NI is unavailable.
 - **Google QUIC / HTTP/3** — Google chose ChaCha20-Poly1305 for QUIC transport encryption on Android devices lacking AES hardware support.
 - **WireGuard VPN** — Uses ChaCha20-Poly1305 as its sole symmetric cipher for tunnel encryption, chosen for its speed and simplicity.
 - **OpenSSH** — Supports `chacha20-poly1305@openssh.com` as a transport cipher, widely deployed as the default on many distributions.
@@ -72,5 +72,7 @@ The suite has two layers, both run in CI before every deploy:
 - **UI integration** (`src/ui.test.ts`) — boots the real UI against `index.html` in a headless DOM and drives every section the way a user would, catching DOM-wiring regressions.
 
 ---
+
+*One of 170+ browser demos in the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
 
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
