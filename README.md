@@ -29,7 +29,7 @@ A plain-language primer opens the page — defining stream cipher, key, nonce, k
 - **Nonce reuse (two-time pad)** — Encrypting two messages with the same key and nonce produces identical keystreams, so XORing the ciphertexts yields the XOR of the plaintexts. The demo's Section D demonstrates this directly.
 - **Missing authentication** — ChaCha20 is malleable: an attacker can flip bits in the ciphertext and the corresponding plaintext bits flip predictably. Without Poly1305 or another MAC, tampered ciphertext decrypts without any error.
 - **Counter overflow** — The 32-bit block counter limits a single key+nonce pair to 2³² blocks (256 GB). Exceeding this wraps the counter and reuses keystream, silently breaking confidentiality.
-- **96-bit nonce collision risk** — With a 96-bit nonce, randomly generating nonces becomes unsafe after roughly 2³² messages per key (birthday bound). For random nonces, use XChaCha20 with its 192-bit nonce instead.
+- **96-bit nonce collision risk** — With a 96-bit nonce, randomly generated nonces should be capped at roughly 2³² messages per key. That is the invocation limit NIST SP 800-38D §8.3 sets for random IVs, chosen to hold the collision probability at or below 2⁻³² — far stricter than the actual birthday bound of a 96-bit space (~2⁴⁸). For random nonces, use XChaCha20 with its 192-bit nonce instead.
 
 ## Real-World Usage
 
