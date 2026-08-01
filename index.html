@@ -15,11 +15,6 @@
     <meta name="description" content="Interactive ChaCha20 stream cipher demo. Visualize the quarter-round, keystream generation, and nonce reuse attacks." />
   </head>
   <body>
-<!-- BEGIN crypto-lab shared header — managed; edit shared-header.html + re-run reapply-header.py
-     Identical on every lab. Self-contained styles. Accents use each demo's own
-     --accent CSS variable (teal #35d6bb fallback). The ONLY per-repo value is the
-     repo name (crypto-lab-chacha20-stream) in the GitHub link.
-     Source of truth: github.com/systemslibrarian/crypto-lab/shared-header.html -->
 <style>
   .cl-topbar{
     /* The bar is always dark (#0b1512) regardless of page theme, so header
@@ -131,7 +126,6 @@
     else dedupeBanner();
   })();
 </script>
-<!-- END crypto-lab shared header -->
     <div class="container">
 
       <!-- Header / Hero -->
@@ -148,6 +142,9 @@
       </header>
       <!-- in-page theme toggle: hidden by shared topbar CSS, kept for lab theme JS -->
       <button id="theme-toggle" aria-label="Switch to light mode">🌙</button>
+
+      <!-- main landmark; also the skip link's target (the header's href="#app"). -->
+      <main id="app">
 
       <span class="badge">crypto-lab interactive demo</span>
 
@@ -352,12 +349,16 @@
         <div class="info-tab-panel" id="tab-matrix" role="tabpanel" aria-labelledby="tabbtn-matrix">
           <h3>The 4×4 State Matrix</h3>
           <p>ChaCha20 operates on a 4×4 matrix of 32-bit words (512 bits total):</p>
+          <!-- Four monospace 8-char columns do not fit a 360px viewport; let the
+               table scroll inside its own box rather than the page. -->
+          <div class="table-scroll">
           <table class="state-table">
             <tr><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td></tr>
             <tr><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td></tr>
             <tr><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td></tr>
             <tr><td style="color:var(--orange);">bbbbbbbb</td><td style="color:var(--red);">nnnnnnnn</td><td style="color:var(--red);">nnnnnnnn</td><td style="color:var(--red);">nnnnnnnn</td></tr>
           </table>
+          </div>
           <ul>
             <li><strong style="color:var(--accent);">c</strong> — Constants: the ASCII of "expand 32-byte k" (<code>0x61707865 0x3320646e 0x79622d32 0x6b206574</code>)</li>
             <li><strong style="color:var(--green);">k</strong> — Key: 256 bits (8 words) of secret key material</li>
@@ -397,6 +398,8 @@
         <a href="https://systemslibrarian.github.io/crypto-lab-ratchet-wire/">Ratchet Wire</a>
         <a href="https://systemslibrarian.github.io/crypto-lab-noise-pipe/">Noise Pipe</a>
       </nav>
+
+      </main>
 
       <footer>
         <p>Part of <a href="https://systemslibrarian.github.io/crypto-lab/">crypto-lab</a></p>
