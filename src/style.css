@@ -15,6 +15,12 @@
   --red: #f85149;
   --orange: #d29922;
   --border: #30363d;
+  /* Control boundaries only (buttons, textareas, crib input, theme toggle). Those
+     controls are filled with --bg-input or --bg-card, which sit at 1.00-1.12:1
+     against the .section card behind them, so the border is the sole boundary and
+     WCAG 2.1 SC 1.4.11 requires 3:1. --border stays as-is for decorative rules
+     (section outlines, tables, matrix cells, tab bar). */
+  --border-strong: #616d7b;
   --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Consolas, monospace;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --radius: 8px;
@@ -36,6 +42,7 @@
   --red: #cf222e;
   --orange: #9a6700;
   --border: #d0d7de;
+  --border-strong: #768a9f;
 }
 
 /* Light accent #0969da is dark enough that white button text passes (5.19:1). */
@@ -80,7 +87,7 @@ body {
   border-radius: 50%;
   background-color: var(--bg-card);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   cursor: pointer;
   font-size: 1.2rem;
   line-height: 1;
@@ -305,7 +312,7 @@ body {
   font-weight: 600;
   padding: 6px 14px;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   background-color: var(--bg-input);
   color: var(--text);
   cursor: pointer;
@@ -357,7 +364,7 @@ textarea {
   font-size: 0.85rem;
   background-color: var(--bg-input);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   padding: 10px;
   resize: vertical;
@@ -732,7 +739,7 @@ textarea:focus {
   font-size: 0.85rem;
   background-color: var(--bg-card);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   padding: 8px 10px;
   margin: 4px 0 12px;
