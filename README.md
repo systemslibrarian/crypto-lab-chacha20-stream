@@ -66,10 +66,12 @@ npm run build    # type-check + production build
 
 ### Tests
 
-The suite has two layers, both run in CI before every deploy:
+The suite has four layers, all run in CI before every deploy:
 
 - **Crypto correctness** (`src/chacha20.test.ts`) — verifies the hand-rolled engine against the RFC 8439 §2.1.1 quarter-round and §2.3.2 block test vectors, cross-checks the keystream byte-for-byte against `@noble/ciphers` across multiple blocks, and confirms the encrypt/decrypt round-trip, the two-time-pad XOR property, and the crib-drag recovery.
 - **UI integration** (`src/ui.test.ts`) — boots the real UI against `index.html` in a headless DOM and drives every section the way a user would, catching DOM-wiring regressions.
+- **Rendered claims** (`e2e/claims.spec.ts`) — drives the production build in Chromium and re-derives every number the page shows. The keystream grid, the Section A XOR exhibit and the fully stepped quarter-round matrix must agree with each other *and* with OpenSSL's ChaCha20 (`node:crypto`), a third implementation sharing no code with this demo. Each avalanche percentage must equal its own bit count over 512, the highlighted cells must be exactly the bytes that changed, and the nonce-reuse leak must equal both `ct1 ⊕ ct2` and `pt1 ⊕ pt2`.
+- **Accessibility** (`e2e/a11y.spec.ts`) — axe-core WCAG 2.1 A/AA scan of the production build in both themes, with every section driven and every disclosure expanded.
 
 ---
 
