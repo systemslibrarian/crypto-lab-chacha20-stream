@@ -16,12 +16,12 @@ export default defineConfig({
     // Without the build, a source change that fails to compile leaves the last
     // good bundle in place and the suite passes green against code that no
     // longer builds — which silently invalidates mutation checks.
-    command: 'npm run build && npm run preview -- --port 4361 --strictPort',
-    url: 'http://localhost:4361/crypto-lab-chacha20-stream/',
+    command: 'npm run build && npm run preview -- --port 4614 --strictPort',
+    url: 'http://localhost:4614/crypto-lab-chacha20-stream/',
     reuseExistingServer: !process.env.CI,
   },
   use: {
-    baseURL: 'http://localhost:4361/crypto-lab-chacha20-stream/',
+    baseURL: 'http://localhost:4614/crypto-lab-chacha20-stream/',
     colorScheme: 'dark',
   },
 });
