@@ -435,6 +435,17 @@ function initQuarterRoundStepper() {
     }
     html += '</tbody></table>';
     stepTable.innerHTML = html;
+    // The table is `min-width: 500px` inside an `overflow-x: auto` box and holds
+    // nothing focusable, so below ~540px a keyboard user has no way to scroll to
+    // the c and d columns (WCAG 2.1.1). Make the container itself the focus
+    // target while the table is in it; `showStepMessage` takes it back out.
+    stepTable.tabIndex = 0;
+  }
+
+  /** Replace the step table with a one-line message — and retire its tab stop. */
+  function showStepMessage(html: string) {
+    stepTable.innerHTML = html;
+    stepTable.removeAttribute('tabindex');
   }
 
   function setProgress(value: number) {
@@ -447,8 +458,9 @@ function initQuarterRoundStepper() {
 
     if (step === 0) {
       renderMatrix(blockResult.initialState);
-      stepTable.innerHTML =
-        '<p class="hint-msg">Initial state: constants + key + counter + nonce. Press <strong>Next ▶</strong> to apply the first quarter-round.</p>';
+      showStepMessage(
+        '<p class="hint-msg">Initial state: constants + key + counter + nonce. Press <strong>Next ▶</strong> to apply the first quarter-round.</p>'
+      );
       roundLabel.innerHTML = 'Initial state — <strong>0 of 80</strong> quarter-rounds applied';
       narrate.hidden = true;
       setProgress(0);
@@ -484,8 +496,9 @@ function initQuarterRoundStepper() {
       setProgress(step);
     } else {
       renderMatrix(blockResult.finalState);
-      stepTable.innerHTML =
-        '<p class="done-msg">✓ All 80 quarter-rounds complete. Final state = scrambled working state + initial state (mod 2³²). Serializing these 16 words little-endian yields the 64-byte keystream.</p>';
+      showStepMessage(
+        '<p class="done-msg">✓ All 80 quarter-rounds complete. Final state = scrambled working state + initial state (mod 2³²). Serializing these 16 words little-endian yields the 64-byte keystream.</p>'
+      );
       roundLabel.innerHTML = '<strong>Complete</strong> — final state ready to serialize into keystream';
       narrate.hidden = false;
       narrate.innerHTML =

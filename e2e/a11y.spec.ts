@@ -1,94 +1,40 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { test } from '@playwright/test';
+import { boot, driveAllStates, reportCollected, NARROW } from './gate';
 
 /**
- * WCAG regression gate. Deploys are already gated on the ChaCha20 unit tests;
- * this gates them on accessibility the same way. Scans the full page with every
- * <details> expanded, every info tab activated, and the demo-driven panels
- * (keystream avalanche, nonce-reuse crib-drag) revealed — in both themes.
+ * WCAG A/AA regression gate.
+ *
+ * The lab is driven the way a visitor drives it: a byte traced through the XOR
+ * exhibit with the arrow keys, encrypt and decrypt round-tripped, the plaintext
+ * emptied and refilled, the key regenerated, the keystream shown, a new nonce
+ * taken so the avalanche stat appears, one nonce bit flipped for the
+ * before/after comparison, the quarter-round stepper initialised and walked
+ * through a column round, a diagonal round, auto-play, a step back, all 80
+ * rounds and a re-initialise, the nonce-reuse attack run and its crib-drag
+ * degraded to nothing, every info tab selected, and the disclosure opened by
+ * its own summary. Every resulting state is scanned in both themes at desktop
+ * and phone width — four configurations, because a gate that scans one scans
+ * one half, and which half depends on the lab's defaults.
+ *
+ * See `gate.ts` for why nothing is injected into the page, why reduced motion
+ * is asked for rather than forced, why the defaults are asserted rather than
+ * assumed, why every step is scanned rather than only the last, and why
+ * `violations` is not the whole oracle.
  */
 
-const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+for (const theme of ['dark', 'light'] as const) {
+  test(`no WCAG A/AA violations in ${theme} theme`, async ({ page }) => {
+    test.setTimeout(900_000);
+    await boot(page, theme);
+    await driveAllStates(page, theme);
+    reportCollected();
+  });
 
-/** Neutralize animations/transitions so scans see settled, deterministic UI. */
-async function killMotion(page: Page): Promise<void> {
-  await page.addStyleTag({
-    content: `*, *::before, *::after {
-      animation-duration: 0s !important;
-      animation-delay: 0s !important;
-      transition-duration: 0s !important;
-      transition-delay: 0s !important;
-      scroll-behavior: auto !important;
-    }`,
+  test(`no WCAG A/AA violations in ${theme} theme at 380px`, async ({ page }) => {
+    test.setTimeout(900_000);
+    await page.setViewportSize(NARROW);
+    await boot(page, theme);
+    await driveAllStates(page, `${theme} @380px`);
+    reportCollected();
   });
 }
-
-/**
- * Drive every interactive section so the axe scan covers the states a user
- * actually reaches: live ciphertext, the keystream grid + avalanche readout,
- * the quarter-round stepper, all three info tabs, and the nonce-reuse
- * crib-drag panel — none of which exist in the initial DOM.
- */
-async function driveDemos(page: Page): Promise<void> {
-  // Section A — encrypt / decrypt.
-  await page.locator('#btn-encrypt').click();
-  await page.locator('#btn-decrypt').click();
-
-  // Section B — keystream visualizer + avalanche panel (starts [hidden]).
-  await page.locator('#btn-show-keystream').click();
-  await page.locator('#btn-new-nonce-ks').click();
-  // Single-bit avalanche comparison panel (starts [hidden]).
-  await page.locator('#btn-flip-bit').click();
-  await expect(page.locator('#avalanche-compare')).toBeVisible();
-
-  // Section C — quarter-round stepper: build the matrix and step it.
-  await page.locator('#btn-run-qr').click();
-  await page.locator('#btn-next-round').click();
-
-  // Section E info tabs — activate each so every panel renders.
-  for (const id of ['tabbtn-comparison', 'tabbtn-matrix', 'tabbtn-safety']) {
-    await page.locator(`#${id}`).click();
-  }
-
-  // Section D — nonce reuse: reveals the crib-drag panel (starts [hidden]).
-  await page.locator('#btn-nonce-reuse').click();
-  await expect(page.locator('#crib-drag')).toBeVisible();
-}
-
-/** Force-expand any collapsed disclosure widgets before scanning. */
-async function openAllDetails(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    for (const details of document.querySelectorAll('details')) {
-      details.open = true;
-    }
-  });
-}
-
-async function scan(page: Page): Promise<void> {
-  const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
-  const summary = results.violations.map((v) => ({
-    id: v.id,
-    impact: v.impact,
-    help: v.help,
-    nodes: v.nodes.map((n) => n.target.join(' ')).slice(0, 5),
-  }));
-  expect(summary).toEqual([]);
-}
-
-test('no WCAG A/AA violations in dark theme', async ({ page }) => {
-  await page.goto('.');
-  await killMotion(page);
-  await driveDemos(page);
-  await openAllDetails(page);
-  await scan(page);
-});
-
-test('no WCAG A/AA violations in light theme', async ({ page }) => {
-  await page.goto('.');
-  await page.locator('#cl-theme-toggle').click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await killMotion(page);
-  await driveDemos(page);
-  await openAllDetails(page);
-  await scan(page);
-});

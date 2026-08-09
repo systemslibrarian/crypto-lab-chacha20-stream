@@ -21,6 +21,12 @@
      WCAG 2.1 SC 1.4.11 requires 3:1. --border stays as-is for decorative rules
      (section outlines, tables, matrix cells, tab bar). */
   --border-strong: #616d7b;
+  /* Inks for the three XOR-exhibit roles. In this theme they are just the
+     semantic tokens; see the light-theme block for why they have to exist as
+     separate names at all. */
+  --xor-ink-pt: var(--accent);
+  --xor-ink-ks: var(--orange);
+  --xor-ink-ct: var(--green);
   --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Consolas, monospace;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --radius: 8px;
@@ -43,6 +49,22 @@
   --orange: #9a6700;
   --border: #d0d7de;
   --border-strong: #768a9f;
+  /* The `.xor-row-*` washes are FIXED rgba() values, authored against the dark
+     --bg-input (#141725). Over this theme's #f0f2f5 the same 12% wash lands at
+     rgb(222,233,246) / rgb(237,232,219) / rgb(219,235,225) — luminance ~0.80,
+     barely off white. --accent, --orange and --green each clear AA on plain
+     white with only 0.37-0.58 of headroom (4.87 / 4.87 / 5.08:1), and the wash
+     spends all of it: the glyphs measured 4.21 / 3.97 / 4.10:1 against those
+     three surfaces. Deepening the wash instead would make the surface darker
+     and the ratio worse, and removing it entirely only reaches 4.63:1 while
+     throwing away the colour coding the exhibit is built on — so the fix is
+     darker ink, not a different surface. These clear 4.5:1 on the tinted rows
+     (6.18 / 5.83 / 6.15:1) and on plain white for the caption legend
+     (7.26 / 6.87 / 7.24:1), which uses the same three tokens so the legend
+     keeps matching the grid it explains. */
+  --xor-ink-pt: #0550ae;
+  --xor-ink-ks: #7a4f00;
+  --xor-ink-ct: #106129;
 }
 
 /* Light accent #0969da is dark enough that white button text passes (5.19:1). */
@@ -193,9 +215,9 @@ body {
   margin: 14px 0 8px;
 }
 
-.xor-key-pt { color: var(--accent); font-weight: 700; }
-.xor-key-ks { color: var(--orange); font-weight: 700; }
-.xor-key-ct { color: var(--green); font-weight: 700; }
+.xor-key-pt { color: var(--xor-ink-pt); font-weight: 700; }
+.xor-key-ks { color: var(--xor-ink-ks); font-weight: 700; }
+.xor-key-ct { color: var(--xor-ink-ct); font-weight: 700; }
 
 .xor-viz {
   overflow-x: auto;
@@ -234,11 +256,11 @@ body {
 .xor-hex { font-size: 0.66rem; color: var(--text-dim); }
 
 .xor-row-pt { background-color: rgba(88, 166, 255, 0.12); }
-.xor-row-pt .xor-glyph { color: var(--accent); }
+.xor-row-pt .xor-glyph { color: var(--xor-ink-pt); }
 .xor-row-ks { background-color: rgba(210, 153, 34, 0.12); }
-.xor-row-ks .xor-glyph { color: var(--orange); }
+.xor-row-ks .xor-glyph { color: var(--xor-ink-ks); }
 .xor-row-ct { background-color: rgba(63, 185, 80, 0.12); }
-.xor-row-ct .xor-glyph { color: var(--green); }
+.xor-row-ct .xor-glyph { color: var(--xor-ink-ct); }
 
 .xor-cell.xor-col-active {
   border-color: var(--text-bright);
@@ -645,9 +667,23 @@ textarea:focus {
 .hint-msg { color: var(--text-dim); font-size: 0.82rem; }
 
 /* ─── QR Step Table ─── */
+/* Unlike the hex strips above, this table cannot wrap: six columns of 8-digit
+   hex words are meaningless reflowed, so `min-width: 500px` and a sideways
+   scroll are the right layout below ~540px. That makes a keyboard route
+   mandatory (WCAG 2.1.1) — `ui.ts` sets `tabindex="0"` on this container
+   exactly while it holds the table, so arrow keys can scroll it and the tab
+   stop disappears again when the panel is showing a one-line hint instead. */
 #qr-step-table {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* A focus target with no visible focus ring is a 2.4.7 failure in exchange for
+   a 2.1.1 fix. Matches `.xor-viz`, the one scroller that was already reachable. */
+#qr-step-table:focus-visible,
+.table-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 #qr-step-table table {
@@ -831,7 +867,11 @@ textarea:focus {
   border-radius: 3px;
 }
 
-/* Keeps a wide table from forcing the whole page to scroll sideways on a phone. */
+/* Keeps a wide table from forcing the whole page to scroll sideways on a phone.
+   Four 8-character monospace columns cannot reflow and still read as a 4x4
+   matrix, so this one scrolls and carries `tabindex="0"` in the markup for the
+   keyboard route (WCAG 2.1.1). Unlike `#qr-step-table` the content here is
+   static, so the tab stop is unconditional. */
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -871,13 +911,19 @@ textarea:focus {
     min-width: unset;
   }
 
-  /* Hex values scroll sideways instead of breaking across 4+ lines */
+  /* Hex values WRAP here; they used to scroll sideways instead.
+     `overflow-x: auto; white-space: nowrap` turned the 64-character key into a
+     524px strip inside a 320px box with nothing focusable in it, so a keyboard
+     user could not scroll it and 40% of the key was unreachable — WCAG 2.1.1,
+     and axe files it as `scrollable-region-focusable`. The usual patch is
+     `tabindex="0"` on the scroller, but these are only scrollers below 600px,
+     and tabindex cannot be applied conditionally from CSS: a static one would
+     leave a dead tab stop on every desktop visit. Wrapping removes the barrier
+     rather than routing around it, and the cost is one extra line — the key
+     breaks across 2, not the "4+" the old comment feared. `word-break:
+     break-all` is inherited from `.field-value`, so hex breaks anywhere. */
   .field-row .field-value {
     width: 100%;
-    overflow-x: auto;
-    white-space: nowrap;
-    word-break: normal;
-    -webkit-overflow-scrolling: touch;
   }
 
   /* Byte-tag + buttons sit on their own flex row */
@@ -886,11 +932,16 @@ textarea:focus {
     flex: none;
   }
 
-  /* Cap output boxes so ciphertext doesn't scroll the whole page */
-  .output-box {
-    max-height: 90px;
-    overflow-y: auto;
-  }
+  /* Output boxes are NOT height-capped. `max-height: 90px; overflow-y: auto`
+     used to keep a long ciphertext from lengthening the page, and for the
+     43-byte default plaintext it never even engaged — which is why it survived
+     so long. Type 160 bytes and the ciphertext becomes 320 hex characters,
+     209px of text inside an 88px box, with nothing focusable in it and no
+     keyboard route to the rest (WCAG 2.1.1). Same reasoning as `.field-value`
+     above: a nested scroll region introduced to save vertical space on a phone
+     is also worse on touch, where it competes with the page scroll. Let the
+     box grow and let the page scroll, which every input method can already
+     do. */
 
   .matrix-cell { font-size: 0.6rem; padding: 5px 2px; }
   .matrix-val { font-size: 0.58rem; }

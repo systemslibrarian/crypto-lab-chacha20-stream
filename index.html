@@ -297,7 +297,11 @@
         <!-- Plain-English narration of the current step: converts ARX pseudocode
              into what add/xor/rotate actually DO, and why mixing diffuses bits. -->
         <p id="qr-narrate" class="qr-narrate" role="status" aria-live="polite" hidden></p>
-        <div id="qr-step-table"></div>
+        <!-- Holds the 6-column ARX operation trace, which is wider than a phone
+             and scrolls sideways. `ui.ts` adds tabindex="0" for the duration
+             the table is present (WCAG 2.1.1) and drops it again when this
+             panel is showing a one-line hint, so there is no dead tab stop. -->
+        <div id="qr-step-table" role="group" aria-label="Quarter-round operation trace"></div>
       </div>
 
       <!-- ═══ Section D — Nonce Reuse Attack Demo ═══ -->
@@ -368,8 +372,12 @@
           <h3>The 4×4 State Matrix</h3>
           <p>ChaCha20 operates on a 4×4 matrix of 32-bit words (512 bits total):</p>
           <!-- Four monospace 8-char columns do not fit a 360px viewport; let the
-               table scroll inside its own box rather than the page. -->
-          <div class="table-scroll">
+               table scroll inside its own box rather than the page. A scrolling
+               box holding nothing focusable is unreachable by keyboard (WCAG
+               2.1.1), so it is its own focus target and carries a name to
+               announce when focus lands there. -->
+          <div class="table-scroll" tabindex="0" role="group"
+               aria-label="ChaCha20 4 by 4 state matrix layout, scrolls horizontally">
           <table class="state-table">
             <tr><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td><td style="color:var(--accent);">cccccccc</td></tr>
             <tr><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td><td style="color:var(--green);">kkkkkkkk</td></tr>
