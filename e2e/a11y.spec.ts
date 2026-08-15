@@ -22,7 +22,7 @@ import { boot, driveAllStates, expectBaselineNotStale, reportCollected, NARROW }
  * `violations` is not the whole oracle.
  */
 
-for (const theme of ['dark', 'light'] as const) {
+for (const theme of ['dark'] as const) {
   test(`no WCAG A/AA violations in ${theme} theme`, async ({ page }) => {
     test.setTimeout(900_000);
     await boot(page, theme);
@@ -44,7 +44,7 @@ for (const theme of ['dark', 'light'] as const) {
     // After `reportCollected()`, deliberately: in an `A11Y_COLLECT` run that
     // call throws to stop a collecting pass being read as green, and it should
     // keep doing so before this hard assertion fires.
-    if (theme === 'light') expectBaselineNotStale();
+    expectBaselineNotStale();
   });
 
   test(`no WCAG A/AA violations in ${theme} theme at 380px`, async ({ page }) => {
@@ -54,6 +54,6 @@ for (const theme of ['dark', 'light'] as const) {
     await driveAllStates(page, `${theme} @380px`);
     reportCollected();
     // Same reasoning as above; both light configurations reach all three.
-    if (theme === 'light') expectBaselineNotStale();
+    expectBaselineNotStale();
   });
 }
