@@ -33,7 +33,7 @@ A plain-language primer opens the page — defining stream cipher, key, nonce, k
 
 ## Real-World Usage
 
-- **TLS 1.3 (RFC 8446)** — `TLS_CHACHA20_POLY1305_SHA256` is a SHOULD-implement cipher suite (§9.1 makes only `TLS_AES_128_GCM_SHA256` mandatory), used as the preferred cipher when AES-NI is unavailable.
+- **TLS 1.3 (RFC 9846)** — `TLS_CHACHA20_POLY1305_SHA256` is a SHOULD-implement cipher suite (§9.1 makes only `TLS_AES_128_GCM_SHA256` mandatory), used as the preferred cipher when AES-NI is unavailable.
 - **Google QUIC / HTTP/3** — Google chose ChaCha20-Poly1305 for QUIC transport encryption on Android devices lacking AES hardware support.
 - **WireGuard VPN** — Uses ChaCha20-Poly1305 as its sole symmetric cipher for tunnel encryption, chosen for its speed and simplicity.
 - **OpenSSH** — Supports `chacha20-poly1305@openssh.com` as a transport cipher, widely deployed as the default on many distributions.
