@@ -399,11 +399,11 @@
       <details>
         <summary>Why this matters</summary>
         <div>
-          <p>AES requires dedicated hardware instructions (AES-NI) to run safely and quickly.
-          On devices without AES-NI — most ARM chips before 2011, many IoT devices, some
-          embedded systems — AES implementations leak timing information that can expose keys.
-          ChaCha20 is immune to this entire class of attack by design. That's why TLS 1.3
-          supports it as a first-class cipher suite.</p>
+          <p>ChaCha20 uses additions, XORs and fixed rotations, supporting fast software implementations
+          without lookup tables indexed by secret data. AES can also be implemented with constant-time
+          software or hardware acceleration. Implementation, compiler and hardware behavior still matter:
+          this browser lab does not prove timing or broader side-channel resistance. TLS 1.3 supports
+          ChaCha20-Poly1305 as an authenticated cipher suite.</p>
         </div>
       </details>
 
@@ -419,6 +419,7 @@
 <h2 id="chacha-research-heading">Research context: reduced-round ChaCha</h2>
 <p><a style="color:inherit;text-decoration:underline" href="https://eprint.iacr.org/2025/437" target="_blank" rel="noopener noreferrer">EUROCRYPT 2025: Improved Cryptanalysis of ChaCha — Beating PNBs with Bit Puncturing</a> studies differential-linear attacks on 6, 7 and 7.5 rounds. Its reported costs are paper estimates, not browser measurements. This does not break the full 20-round ChaCha20 construction.</p>
 <p>The <a style="color:inherit;text-decoration:underline" href="https://systemslibrarian.github.io/crypto-lab-chacha20-stream/">ChaCha20 Stream</a> encryption path remains 20 rounds (80 quarter-round operations per block), with RFC 8439 controls. <a style="color:inherit;text-decoration:underline" href="https://systemslibrarian.github.io/crypto-lab-matsui-line/">Matsui Line</a> and <a style="color:inherit;text-decoration:underline" href="https://systemslibrarian.github.io/crypto-lab-biham-lens/">Biham Lens</a> teach linear and differential attacks at their own toy/published-cipher scales; they do not execute this ChaCha attack. Reviewed 12 October 2026.</p>
+<div id="research-trace"></div>
 </section>
 </main>
 

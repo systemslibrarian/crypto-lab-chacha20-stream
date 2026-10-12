@@ -1037,3 +1037,13 @@ footer .verse {
   margin-top: 8px;
   color: var(--text-dim);
 }
+
+#research-trace { margin-top: 1.5rem; }
+#research-trace a { color: inherit; text-decoration: underline; }
+#research-round-count { background: var(--bg-input); color: var(--text-bright); border: 1px solid var(--border-strong); padding: .6rem; max-width: 100%; margin: .6rem 0; font-size: 1rem; }
+.trace-table-shell { overflow-x: auto; margin: 1rem 0; }
+#research-state { width: 100%; border-collapse: collapse; font-family: monospace; }
+#research-state caption { text-align: left; font-family: inherit; padding-bottom: .75rem; }
+#research-state td { padding: .5rem; border: 1px solid var(--border); }
+#research-state strong { color: var(--accent); }
+#research-feedforward { overflow-wrap: anywhere; }

@@ -82,3 +82,8 @@ The suite has four layers, all run in CI before every deploy:
 ## Reduced-round ChaCha context
 
 The live demo links [EUROCRYPT 2025 bit-puncturing research](https://eprint.iacr.org/2025/437), labels reduced-round results and paper estimates, and distinguishes them from full ChaCha20 and from the attacks these labs actually execute. No reduced-round cipher replaces normal encryption.
+
+
+## Reduced-round research trace
+
+The source-linked research section has a separate 6/7/20-round prefix trace using the public [RFC 8439 §2.3.2 input](https://www.rfc-editor.org/rfc/rfc8439#section-2.3.2). It shows the working matrix before feed-forward and the standard block only at the full 20-round endpoint. This does not run the paper’s bit-puncturing attack or its fractional-round convention. The encryption API and session visualization remain full ChaCha20; research controls cannot select a weaker cipher. ARX structure is not a browser timing-resistance proof.
