@@ -78,3 +78,7 @@ The suite has four layers, all run in CI before every deploy:
 *Part of the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
 
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
+
+## Reduced-round ChaCha context
+
+The live demo links [EUROCRYPT 2025 bit-puncturing research](https://eprint.iacr.org/2025/437), labels reduced-round results and paper estimates, and distinguishes them from full ChaCha20 and from the attacks these labs actually execute. No reduced-round cipher replaces normal encryption.
