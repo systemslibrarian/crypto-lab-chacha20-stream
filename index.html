@@ -349,7 +349,7 @@
           <h3>Why ChaCha20?</h3>
           <ul>
             <li><strong>Software performance without AES-NI:</strong> On devices lacking hardware AES instructions (mobile, IoT, older ARM), ChaCha20 runs 2–3× faster than software AES.</li>
-            <li><strong>Timing-attack resistance:</strong> AES uses S-box table lookups that leak timing information. ChaCha20's ARX design (Add-Rotate-XOR) uses only constant-time operations — no lookup tables.</li>
+            <li><strong>Timing-attack resistance:</strong> Table-based software AES uses S-box lookups indexed by secret data, which can leak timing through the cache; constant-time AES needs bitslicing or hardware instructions. ChaCha20's ARX design (Add-Rotate-XOR) uses only constant-time operations — no lookup tables.</li>
             <li><strong>Google's choice:</strong> Google adopted ChaCha20-Poly1305 for Android TLS and QUIC because most mobile devices lacked AES-NI when the decision was made.</li>
             <li><strong>RFC 8439:</strong> Standardizes ChaCha20 and Poly1305 for IETF protocols including TLS 1.3.</li>
           </ul>

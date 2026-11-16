@@ -145,6 +145,17 @@ describe('UI integration', () => {
     expect($('#tabbtn-safety').getAttribute('aria-selected')).toBe('true');
     expect($('#tab-comparison').classList.contains('active')).toBe(false);
   });
+
+  // Cache-timing leakage is a property of table-based software AES, not of AES
+  // itself: bitsliced software and AES-NI do not leak this way. The "Why this
+  // matters" panel already says so, so the comparison tab must not contradict
+  // it by attributing the leak to the cipher.
+  it('the timing-attack bullet scopes the S-box leak to table-based software AES', () => {
+    const bullet = $('#tab-comparison').textContent!;
+    expect(bullet).toMatch(/Table-based software AES/);
+    expect(bullet).not.toMatch(/AES uses S-box table lookups that leak timing/);
+    expect($('details').textContent).toMatch(/AES can also be implemented with constant-time/);
+  });
 });
 
 // ADA / WCAG: every interactive control must expose an accessible name. -------
