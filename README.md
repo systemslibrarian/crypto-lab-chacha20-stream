@@ -11,7 +11,7 @@ ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardize
 - **TLS and QUIC cipher suites** — ChaCha20-Poly1305 is a first-class cipher suite in TLS 1.3 and the default in QUIC on devices without AES-NI.
 - **High-throughput stream encryption** — ChaCha20 produces 64 bytes of keystream per block with simple 32-bit operations, making it efficient for bulk data encryption.
 - **Do NOT use ChaCha20 alone for authenticated encryption** — ChaCha20 provides confidentiality only. Always pair it with Poly1305 (or another MAC) to get integrity and authenticity in production systems.
-- **Do NOT treat this as production code** — it is a teaching demo; the hand-rolled block function exists for visualization, and real encryption should use the audited `@noble/ciphers` (or platform crypto) path.
+- **Do NOT treat this as production code** — it is a teaching demo; the hand-rolled block function exists for visualization, and real encryption should use the `@noble/ciphers` (or platform crypto) path. On "audited": @noble/ciphers records its latest audit "at version 1.0.0, in Sep 2024, independently, by [cure53]", and this lab pins `^2.4.0`, which that audit does not cover.
 
 ## Live Demo
 
