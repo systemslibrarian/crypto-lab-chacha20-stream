@@ -2,7 +2,7 @@
 
 ## What It Is
 
-ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardized in RFC 8439. It encrypts data by XORing plaintext with a pseudorandom keystream generated from a 256-bit key, a 96-bit nonce, and a 32-bit block counter. The cipher uses an ARX construction (Add-Rotate-XOR) that operates entirely with constant-time instructions, providing confidentiality without relying on hardware acceleration. This demo implements the full ChaCha20 block function from scratch for visualization and uses `@noble/ciphers` for production encrypt/decrypt operations. The hand-rolled engine is pinned to the official **RFC 8439 test vectors** and cross-checked byte-for-byte against `@noble/ciphers`, so the visualization is provably correct (see [Development](#development)).
+ChaCha20 is a 256-bit stream cipher designed by Daniel J. Bernstein, standardized in RFC 8439. It encrypts data by XORing plaintext with a pseudorandom keystream generated from a 256-bit key, a 96-bit nonce, and a 32-bit block counter. The cipher uses an ARX construction (Add-Rotate-XOR) with fixed additions, rotations, and XORs. It avoids secret-indexed lookup tables. Timing and physical leakage still depend on the implementation and device. This demo implements the full ChaCha20 block function from scratch for visualization and uses `@noble/ciphers` for production encrypt/decrypt operations. The hand-rolled engine is pinned to the official **RFC 8439 test vectors** and cross-checked byte-for-byte against `@noble/ciphers`, giving independent checks of the visualized states on the tested inputs (see [Development](#development)).
 
 ## When to Use It
 
@@ -28,8 +28,8 @@ A plain-language primer opens the page — defining stream cipher, key, nonce, k
 
 - **Nonce reuse (two-time pad)** — Encrypting two messages with the same key and nonce produces identical keystreams, so XORing the ciphertexts yields the XOR of the plaintexts. The demo's Section D demonstrates this directly.
 - **Missing authentication** — ChaCha20 is malleable: an attacker can flip bits in the ciphertext and the corresponding plaintext bits flip predictably. Without Poly1305 or another MAC, tampered ciphertext decrypts without any error.
-- **Counter overflow** — The 32-bit block counter limits a single key+nonce pair to 2³² blocks (256 GB). Exceeding this wraps the counter and reuses keystream, silently breaking confidentiality.
-- **96-bit nonce collision risk** — With a 96-bit nonce, randomly generated nonces should be capped at roughly 2³² messages per key. That is the invocation limit NIST SP 800-38D §8.3 sets for random IVs, chosen to hold the collision probability at or below 2⁻³² — far stricter than the actual birthday bound of a 96-bit space (~2⁴⁸). For random nonces, use XChaCha20 with its 192-bit nonce instead.
+- **Counter overflow** — Raw ChaCha20 has 2³² counter values for 64-byte blocks (256 GiB) when starting at zero. RFC 8439 AEAD reserves block zero for the Poly1305 key, leaving 2³² − 1 payload blocks. Stop before the counter wraps.
+- **Nonce uniqueness** — This demo generates random nonces. RFC 8439 AEAD requires a unique nonce for each message under a key. Protocols can enforce this with a per-key counter and separate nonce spaces for senders.
 
 ## Real-World Usage
 
